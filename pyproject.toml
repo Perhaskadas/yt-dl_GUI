@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "yt-dlp-gui"
+version = "0.1.0"
+description = "A GUI wrapper for yt-dlp using pywebview"
+requires-python = ">=3.10"
+dependencies = [
+  "pywebview>=5.0",
+  "yt-dlp>=2024.0.0"
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
