@@ -2,11 +2,64 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <script defer src="./app.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>yt-dlp GUI</title>
     <link rel="stylesheet" href="./app.css" />
+    <script defer src="./app.js"></script>
   </head>
+
   <body>
-    <button id="btn">Ping Python</button>
-    <pre id="out"></pre>
+    <div class="app">
+      <header class="topbar">
+        <div class="title">
+          <div class="logo"></div>
+          <div>
+            <div class="name">yt-dlp GUI</div>
+            <div class="sub">Local wrapper • fast iteration</div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="btnStop" class="btn ghost" disabled>Stop</button>
+          <button id="btnDownload" class="btn primary">Download</button>
+        </div>
+      </header>
+
+      <main class="grid">
+        <section class="card">
+          <h2>Download</h2>
+
+          <label class="label">URL</label>
+          <input id="url" class="input" placeholder="Paste a video / playlist URL…" />
+
+          <div class="row">
+            <div class="grow">
+              <label class="label">Output folder</label>
+              <input id="outDir" class="input" placeholder="Choose a folder…" />
+            </div>
+            <div class="row-end">
+              <label class="label">&nbsp;</label>
+              <button id="btnBrowse" class="btn">Browse</button>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="pill">Preset (later): Best</div>
+            <div class="pill">Audio (later): Off</div>
+            <div class="pill">Subs (later): Off</div>
+          </div>
+
+          <div class="progress">
+            <div class="progress-bar" style="width: 0%"></div>
+          </div>
+          <div class="muted" id="status">Idle</div>
+        </section>
+
+        <section class="card">
+          <h2>Log</h2>
+          <pre id="log" class="log"></pre>
+        </section>
+      </main>
+    </div>
   </body>
 </html>
