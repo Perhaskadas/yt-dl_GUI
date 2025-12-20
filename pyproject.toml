@@ -17,3 +17,6 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.yt-dlp-gui]
+requires = ["ffmpeg (system dependency)"]
