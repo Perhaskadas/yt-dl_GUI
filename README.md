@@ -13,12 +13,10 @@ This project wraps the powerful `yt-dlp` CLI in a simple, responsive graphical i
 - Start / Stop downloads safely
 - Native folder picker
 - Runs downloads in a background thread (UI never freezes)
-- Works on macOS (Windows/Linux planned)
 
 ---
 
-## Requirements
-
-### System Dependencies
+## Final Plan
+Be runnable as a self contained and easy to download .exe file
 
 - **FFmpeg** (required for most formats and audio/video merging)
