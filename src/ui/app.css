@@ -144,3 +144,40 @@ h2 { margin: 0 0 12px; font-size: 14px; color: rgba(232,238,252,0.92); }
   color: rgba(232,238,252,0.92);
   white-space: pre-wrap;
 }
+.modal.hidden { display: none; }
+
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  z-index: 9999;
+}
+
+.modal-content {
+  width: min(560px, 96vw);
+  animation: modalIn 400ms ease-out;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+
+@keyframes modalIn {
+  from {
+    transform: translateY(6px) scale(0.98);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}

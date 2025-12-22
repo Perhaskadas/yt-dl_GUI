@@ -19,4 +19,5 @@ This project wraps the powerful `yt-dlp` CLI in a simple, responsive graphical i
 ## Final Plan
 Be runnable as a self contained and easy to download .exe file
 
-- **FFmpeg** (required for most formats and audio/video merging)
+## System Dependencies
+- **FFmpeg** (currently required for most formats and audio/video merging, may be bundled into .exe file later)

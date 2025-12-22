@@ -2,6 +2,9 @@
 from __future__ import annotations
 
 import json
+import os
+import subprocess
+import sys
 import threading
 import webview
 from app.runner import Runner
@@ -13,6 +16,8 @@ class Api:
         self.runner = Runner()
         self.active_job_id: str | None = None
         self._ui_lock = threading.Lock()
+        self._progress_max = 0.0
+        self._last_out_dir = ""
 
     def attach_window(self, window):
         self.window = window
@@ -34,14 +39,27 @@ class Api:
     def _ui_progress(self, pct: float):
         if not self.window:
             return
+
+        pct = max(0.0, min(100.0, pct))
+
+        if pct >= 99.9 and self._progress_max < 95.0:
+            return
+    
+        if pct < self._progress_max:
+            pct = self._progress_max
+        else:
+            self._progress_max = pct
+
         with self._ui_lock:
             self.window.evaluate_js(f"ui.onProgress({pct})")
 
     def _ui_done(self, code: int):
         if not self.window:
             return
+        
+        out_dir_json = json.dumps(self._last_out_dir)
         with self._ui_lock:
-            self.window.evaluate_js(f"ui.onJobEnd({code})")
+            self.window.evaluate_js(f"ui.onJobEnd({code}, {out_dir_json})")
 
     # ---------- JS-callable methods ----------
     def start_download(self, url: str, out_dir: str):
@@ -53,8 +71,11 @@ class Api:
 
         if self.active_job_id is not None:
             return {"ok": False, "error": "A job is already running"}
+        
+        self._last_out_dir = out_dir
 
-        # Start fake runner for now
+        # Start runner
+        self.progress_max = 0.0
         job_id = self.runner.start_ytdlp(
             url=url,
             out_dir=out_dir,
@@ -75,6 +96,26 @@ class Api:
 
     def _on_done(self, code: int):
         # Called from runner thread
+        self._progress_max = 0.0
         self._ui_log(f"[api] job finished with code {code}")
         self.active_job_id = None
         self._ui_done(code)
+
+    def open_folder(self, path: str):
+        path = (path or "").strip()
+        if not path:
+            return {"ok": False, "error": "No folder path provided"}
+
+        if not os.path.isdir(path):
+            return {"ok": False, "error": f"Folder does not exist: {path}"}
+
+        try:
+            if sys.platform.startswith("darwin"):
+                subprocess.run(["open", path], check=False)
+            elif sys.platform.startswith("win32"):
+                subprocess.run(["explorer", path], check=False)
+            else:
+                subprocess.run(["xdg-open", path], check=False)
+            return {"ok": True}
+        except Exception as e:
+            return {"ok": False, "error": repr(e)}

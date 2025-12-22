@@ -5,10 +5,12 @@ import subprocess
 import sys
 import threading
 import time
+import re
 import uuid
 from dataclasses import dataclass
 from typing import Callable, Optional, Dict
 
+DOWNLOAD_PCT_RE = re.compile(r"\[download\]\s+(\d+(?:\.\d+)?)%")
 
 LogFn = Callable[[str], None]
 ProgressFn = Callable[[float], None]  # 0.0 to 100.0
@@ -23,13 +25,6 @@ class JobHandle:
 
 
 class Runner:
-    """
-    Owns running jobs. For now, it simulates a download to prove:
-      - background thread doesn’t freeze UI
-      - progress updates flow
-      - stop works
-    Later you’ll replace _run_fake() with _run_ytdlp().
-    """
     def __init__(self):
         self._jobs: Dict[str, JobHandle] = {}
         self._lock = threading.Lock()
@@ -98,9 +93,19 @@ class Runner:
             
             out_dir = (out_dir or "").strip()
             if not out_dir:
-                args = [sys.executable, "-m", "yt_dlp", url, "--newline"]
+                args = [
+                    sys.executable, "-m", "yt_dlp",
+                    "--cookies-from-browser", "firefox",
+                    url,
+                    "-f", "bv*+ba/best",
+                    "--newline",
+                ]
             else:
-                args = [sys.executable, "-m", "yt_dlp", url, "-P", out_dir, "--newline"]
+                args = [sys.executable, "-m", "yt_dlp", 
+                        url,
+                        "-P", out_dir,
+                        "-f", "bv*+ba/best",
+                        "--newline"]
             on_log("[runner] cmd: " + " ".join(args))
 
             # Run the yt-dlp command in a subprocess
@@ -120,7 +125,17 @@ class Runner:
 
             for line in proc.stdout:
                 # log stdout
-                on_log(line.rstrip("\n"))
+                text = line.rstrip("\n")
+                on_log(text)
+
+                # Try to parse the percentage out of the logs
+                m = DOWNLOAD_PCT_RE.search(text)
+                if m:
+                    try:
+                        pct = float(m.group(1))
+                        on_progress(pct)
+                    except ValueError:
+                        pass
 
                 # handle stop command
                 if handle.stop_event.is_set():

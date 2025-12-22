@@ -15,7 +15,7 @@ def main():
     )
 
     api.attach_window(window)
-    webview.start(debug=True)
+    webview.start()
 
 if __name__ == "__main__":
     main()

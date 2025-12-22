@@ -6,6 +6,28 @@ const downloadBtn = document.getElementById("btnDownload");
 const stopBtn = document.getElementById("btnStop");
 const browseBtn = document.getElementById("btnBrowse");
 const progressBar = document.querySelector(".progress-bar");
+const doneModal = document.getElementById("doneModal");
+const doneTitle = document.getElementById("doneTitle");
+const doneText = document.getElementById("doneText");
+const btnOpenFolder = document.getElementById("btnOpenFolder");
+const btnNextDownload = document.getElementById("btnNextDownload");
+
+let lastOutDir = "";
+
+function showDoneModal(success, outDir) {
+  lastOutDir = outDir || "";
+  doneTitle.textContent = success ? "Download finished" : "Download failed";
+  doneText.textContent = success
+    ? `Saved to: ${lastOutDir || "(default folder)"}`
+    : "Check the log for details.";
+
+  btnOpenFolder.disabled = !success || !lastOutDir;
+  doneModal.classList.remove("hidden");
+}
+
+function hideDoneModal() {
+  doneModal.classList.add("hidden");
+}
 
 function log(line) {
   logEl.textContent += line + "\n";
@@ -25,9 +47,11 @@ window.ui = {
     progressBar.style.width = clamped + "%";
     statusEl.textContent = `Running… ${clamped.toFixed(1)}%`;
   },
-  onJobEnd: (code) => {
+  onJobEnd: (code, outDir) => {
     setRunning(false);
-    statusEl.textContent = code === 0 ? "Done" : `Stopped/Failed (code ${code})`;
+    const success = (code === 0);
+    statusEl.textContent = success ? "Done" : `Failed/Stopped (code ${code})`;
+    showDoneModal(success, outDir);
   },
 };
 
@@ -75,4 +99,24 @@ stopBtn.addEventListener("click", async () => {
   } catch (e) {
     log(`[error] ${e}`);
   }
+});
+
+btnOpenFolder.addEventListener("click", async () => {
+  if (!lastOutDir) return;
+  const res = await pywebview.api.open_folder(lastOutDir);
+  if (!res.ok) log(`[error] open_folder: ${res.error}`);
+});
+
+btnNextDownload.addEventListener("click", () => {
+  hideDoneModal();
+  progressBar.style.width = "0%";
+  statusEl.textContent = "Ready";
+});
+
+doneModal.addEventListener("click", (e) => {
+  if (e.target === doneModal) hideDoneModal();
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") hideDoneModal();
 });
