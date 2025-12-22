@@ -68,6 +68,9 @@ class Api:
 
         if not url:
             return {"ok": False, "error": "Missing URL"}
+        
+        if not out_dir:
+            return {"ok":False, "error": "Select an output folder."}
 
         if self.active_job_id is not None:
             return {"ok": False, "error": "A job is already running"}
@@ -75,7 +78,7 @@ class Api:
         self._last_out_dir = out_dir
 
         # Start runner
-        self.progress_max = 0.0
+        self._progress_max = 0.0
         job_id = self.runner.start_ytdlp(
             url=url,
             out_dir=out_dir,

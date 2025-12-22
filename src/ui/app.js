@@ -22,8 +22,14 @@ function showDoneModal(success, outDir) {
     : "Check the log for details.";
 
   btnOpenFolder.disabled = !success || !lastOutDir;
+
+  const modalContent = doneModal.querySelector(".modal-content");
+  modalContent.classList.remove("success", "error");
+  modalContent.classList.add(success ? "success" : "error");
+
   doneModal.classList.remove("hidden");
 }
+
 
 function hideDoneModal() {
   doneModal.classList.add("hidden");
@@ -67,30 +73,45 @@ browseBtn.addEventListener("click", async () => {
 downloadBtn.addEventListener("click", async () => {
   const url = urlEl.value.trim();
   const outDir = outEl.value.trim();
-  logEl.textContent = "";
-
-  if (!url) {
-    statusEl.textContent = "Missing URL";
-    log("[ui] paste a URL first");
+  
+  const problems = [];
+  if (!url) problems.push("Enter a URL.");
+  else if (!isLikelyUrl(url)) problems.push("URL must start with http:// or https://");
+  
+  // Force folder selection (as you wanted)
+  if (!outDir) problems.push("Select an output folder.");
+  
+  if (problems.length) {
+    statusEl.textContent = "Fix input";
+    showToastList(problems);
     return;
   }
 
+  // Clear logs
+  logEl.textContent = "";
+
+  // Run
   try {
     setRunning(true);
     progressBar.style.width = "0%";
     statusEl.textContent = "Starting…";
+
     const res = await pywebview.api.start_download(url, outDir);
     log(`[python] ${JSON.stringify(res)}`);
+
     if (!res.ok) {
       setRunning(false);
-      statusEl.textContent = res.error || "Error";
+      statusEl.textContent = "Error";
+      showToast(res.error || "Error starting download");
     }
   } catch (e) {
     setRunning(false);
     log(`[error] ${e}`);
     statusEl.textContent = "Error";
+    showToast("Unexpected error. Check logs.");
   }
 });
+
 
 stopBtn.addEventListener("click", async () => {
   try {
@@ -120,3 +141,61 @@ doneModal.addEventListener("click", (e) => {
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") hideDoneModal();
 });
+
+const toastEl = document.getElementById("toast");
+let toastTimer = null;
+
+function hideToast() {
+  if (!toastEl) return;
+
+  toastEl.classList.remove("show");
+
+  // After the transition finishes, truly remove it from layout
+  const onEnd = (e) => {
+    if (e.propertyName !== "opacity") return;
+    toastEl.classList.add("hidden");
+    toastEl.removeEventListener("transitionend", onEnd);
+  };
+  toastEl.addEventListener("transitionend", onEnd);
+}
+
+function showToastHtml(html, ms = 2200) {
+  if (!toastEl) return;
+  if (!html || !html.trim()) return;
+
+  clearTimeout(toastTimer);
+
+  toastEl.innerHTML = html;
+
+  // Make it participate in layout first
+  toastEl.classList.remove("hidden");
+
+  // Next frame: enable the transition to "show"
+  requestAnimationFrame(() => {
+    toastEl.classList.add("show");
+  });
+
+  toastTimer = setTimeout(hideToast, ms);
+}
+
+function showToastList(items, ms = 2200) {
+  if (!items || items.length === 0) return;
+
+  const html = `
+    <div class="toast-title">Please fix the following:</div>
+    <ul class="toast-list">
+      ${items.map((x) => `<li>${x}</li>`).join("")}
+    </ul>
+  `;
+  showToastHtml(html, ms);
+}
+
+function isLikelyUrl(s) {
+  try {
+    const u = new URL(s);
+    return u.protocol === "http:" || u.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
