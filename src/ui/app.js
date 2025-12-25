@@ -199,3 +199,49 @@ function isLikelyUrl(s) {
   }
 }
 
+const themeToggle = document.getElementById("themeToggle");
+
+function setTheme(theme, animate = true) {
+  const html = document.documentElement;
+  const prev = html.dataset.theme || "dark";
+  if (theme !== "dark" && theme !== "light") theme = "dark";
+  if (prev === theme) return;
+
+  if (animate) {
+    html.classList.add("theme-animating");
+    html.classList.toggle("to-light", theme === "light");
+    html.classList.toggle("to-dark", theme === "dark");
+
+    // apply theme right away so variables transition
+    html.dataset.theme = theme;
+
+    // remove animating flags after the transition
+    window.setTimeout(() => {
+      html.classList.remove("theme-animating", "to-light", "to-dark");
+    }, 320);
+  } else {
+    html.dataset.theme = theme;
+    html.classList.remove("theme-animating", "to-light", "to-dark");
+  }
+
+  localStorage.setItem("theme", theme);
+}
+
+function initTheme() {
+  const saved = localStorage.getItem("theme");
+  if (saved === "dark" || saved === "light") {
+    setTheme(saved, false);
+    return;
+  }
+
+  // default to system preference if nothing saved
+  const prefersLight = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches;
+  setTheme(prefersLight ? "light" : "dark", false);
+}
+
+themeToggle?.addEventListener("click", () => {
+  const current = document.documentElement.dataset.theme || "dark";
+  setTheme(current === "dark" ? "light" : "dark", true);
+});
+
+initTheme();

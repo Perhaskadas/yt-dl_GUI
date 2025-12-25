@@ -80,3 +80,101 @@ h2 {
 }
 
 .muted { margin-top: 10px; font-size: 12px; color: var(--muted); }
+
+/* Smooth transitions when theme changes */
+html.theme-animating body,
+html.theme-animating .card,
+html.theme-animating .btn,
+html.theme-animating .input,
+html.theme-animating .log,
+html.theme-animating .pill,
+html.theme-animating .progress,
+html.theme-animating .modal,
+html.theme-animating .toast {
+  transition:
+    background-color 280ms ease,
+    color 280ms ease,
+    border-color 280ms ease,
+    box-shadow 280ms ease,
+    filter 280ms ease;
+}
+
+/* Toggle button layout */
+.theme-toggle {
+  width: 44px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Icons stacked and animated */
+.theme-toggle .icon-sun,
+.theme-toggle .icon-moon {
+  position: absolute;
+  font-size: 16px;
+  line-height: 1;
+  transition: transform 400ms ease, opacity 400ms ease;
+}
+
+/* Default (dark): show moon */
+html[data-theme="dark"] .theme-toggle .icon-moon {
+  opacity: 1;
+  transform: translateY(0) rotate(0deg);
+}
+html[data-theme="dark"] .theme-toggle .icon-sun {
+  opacity: 0;
+  transform: translateY(14px) rotate(-30deg);
+}
+
+/* Light: show sun */
+html[data-theme="light"] .theme-toggle .icon-sun {
+  opacity: 1;
+  transform: translateY(0) rotate(0deg);
+}
+html[data-theme="light"] .theme-toggle .icon-moon {
+  opacity: 0;
+  transform: translateY(14px) rotate(30deg);
+}
+
+/* Click animation: sun sets / moon rises */
+html.theme-animating.to-light .theme-toggle .icon-moon {
+  opacity: 0;
+  transform: translateY(14px) rotate(30deg);
+}
+html.theme-animating.to-light .theme-toggle .icon-sun {
+  opacity: 1;
+  transform: translateY(0) rotate(0deg);
+}
+
+html.theme-animating.to-dark .theme-toggle .icon-sun {
+  opacity: 0;
+  transform: translateY(14px) rotate(-30deg);
+}
+html.theme-animating.to-dark .theme-toggle .icon-moon {
+  opacity: 1;
+  transform: translateY(0) rotate(0deg);
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  html.theme-animating body,
+  html.theme-animating .card,
+  html.theme-animating .btn,
+  html.theme-animating .input,
+  html.theme-animating .log,
+  html.theme-animating .pill,
+  html.theme-animating .progress,
+  html.theme-animating .modal,
+  html.theme-animating .toast {
+    transition: none;
+  }
+
+  .theme-toggle .icon-sun,
+  .theme-toggle .icon-moon {
+    transition: none;
+  }
+}
