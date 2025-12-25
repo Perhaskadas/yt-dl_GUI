@@ -199,6 +199,121 @@ function isLikelyUrl(s) {
   }
 }
 
+const toggleLogsBtn = document.getElementById("toggleLogsBtn");
+const previewPanel = document.getElementById("previewPanel");
+const logPanel = document.getElementById("logPanel");
+
+toggleLogsBtn.addEventListener("click", () => {
+  const showingLogs = !logPanel.classList.contains("hidden");
+  if (showingLogs) {
+    logPanel.classList.add("hidden");
+    previewPanel.classList.remove("hidden");
+    toggleLogsBtn.textContent = "Show logs";
+  } else {
+    previewPanel.classList.add("hidden");
+    logPanel.classList.remove("hidden");
+    toggleLogsBtn.textContent = "Hide logs";
+  }
+});
+
+const pvThumb = document.getElementById("pvThumb");
+const pvTitle = document.getElementById("pvTitle");
+const pvSub = document.getElementById("pvSub");
+const pvNote = document.getElementById("pvNote");
+const pvRefreshBtn = document.getElementById("pvRefreshBtn");
+
+function previewSetIdle() {
+  pvTitle.textContent = "Paste a URL to preview";
+  pvSub.textContent = "";
+  pvNote.textContent = "";
+  pvThumb.classList.add("hidden");
+  pvThumb.removeAttribute("src");
+  pvRefreshBtn.disabled = true;
+}
+
+function previewSetLoading() {
+  pvTitle.textContent = "Loading preview…";
+  pvSub.textContent = "";
+  pvNote.textContent = "";
+  pvThumb.classList.add("hidden");
+  pvThumb.removeAttribute("src");
+  pvRefreshBtn.disabled = true;
+}
+
+function previewSetError(msg) {
+  pvTitle.textContent = "Preview failed";
+  pvSub.textContent = msg || "Unknown error";
+  pvNote.textContent = "";
+  pvThumb.classList.add("hidden");
+  pvThumb.removeAttribute("src");
+  pvRefreshBtn.disabled = false;
+}
+
+function previewSetData(pv) {
+  pvTitle.textContent = pv.title || "(no title)";
+  pvSub.textContent = pv.uploader ? `By ${pv.uploader}` : "";
+  pvNote.textContent = pv.duration_text ? `Length: ${pv.duration_text}` : "";
+  if (pv.thumbnail) {
+    pvThumb.src = pv.thumbnail;
+    pvThumb.classList.remove("hidden");
+  } else {
+    pvThumb.classList.add("hidden");
+    pvThumb.removeAttribute("src");
+  }
+  pvRefreshBtn.disabled = false;
+}
+
+let previewTimer = null;
+let lastPreviewUrl = "";
+
+function schedulePreview(url) {
+  clearTimeout(previewTimer);
+  previewTimer = setTimeout(() => runPreview(url), 550);
+}
+
+let previewReqId = 0;
+
+async function runPreview(url) {
+  url = (url || "").trim();
+  lastPreviewUrl = url;
+
+  if (!url) {
+    previewSetIdle();
+    return;
+  }
+  if (!isLikelyUrl(url)) {
+    previewSetError("URL must start with http:// or https://");
+    return;
+  }
+
+  previewSetLoading();
+
+  const myId = ++previewReqId;
+
+  try {
+    const res = await pywebview.api.probe(url);
+
+    // ignore stale responses (user typed another URL)
+    if (myId !== previewReqId) return;
+
+    if (!res || !res.ok) {
+      previewSetError((res && res.error) || "Preview failed");
+      return;
+    }
+
+    previewSetData(res.preview);
+  } catch (e) {
+    if (myId !== previewReqId) return;
+    previewSetError(String(e));
+  }
+}
+
+
+urlEl.addEventListener("input", () => schedulePreview(urlEl.value));
+
+pvRefreshBtn.addEventListener("click", () => runPreview(urlEl.value));
+
+
 const themeToggle = document.getElementById("themeToggle");
 
 function setTheme(theme, animate = true) {

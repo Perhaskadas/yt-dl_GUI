@@ -6,6 +6,8 @@ import os
 import subprocess
 import sys
 import threading
+import time
+from urllib.parse import urlparse
 import webview
 from app.runner import Runner
 
@@ -122,3 +124,73 @@ class Api:
             return {"ok": True}
         except Exception as e:
             return {"ok": False, "error": repr(e)}
+        
+    def probe(self, url: str):
+        url = (url or "").strip()
+        if not url:
+            return {"ok": False, "error": "Missing URL"}
+
+        # quick scheme check (don’t overthink; yt-dlp will validate too)
+        try:
+            p = urlparse(url)
+            if p.scheme not in ("http", "https"):
+                return {"ok": False, "error": "URL must start with http:// or https://"}
+        except Exception:
+            return {"ok": False, "error": "Invalid URL"}
+
+        args = [sys.executable, "-m", "yt_dlp", 
+            "--dump-single-json",
+            "--no-playlist",
+            "--cookies-from-browser", "firefox",
+            "--skip-download",
+            "--quiet",
+            "--no-warnings",
+            url,
+        ]
+
+        try:
+            t0 = time.time()
+            out = subprocess.check_output(
+                args,
+                stderr=subprocess.STDOUT,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=15,
+            )
+            data = json.loads(out)
+
+            duration = data.get("duration")
+            preview = {
+                "title": data.get("title") or "",
+                "uploader": data.get("uploader") or data.get("channel") or "",
+                "duration": duration if isinstance(duration, int) else None,
+                "duration_text": _fmt_duration(duration if isinstance(duration, int) else None),
+                "thumbnail": data.get("thumbnail") or "",
+                "webpage_url": data.get("webpage_url") or url,
+                "is_live": bool(data.get("is_live")),
+                "extractor": data.get("extractor") or "",
+                "took_ms": int((time.time() - t0) * 1000),
+            }
+
+            return {"ok": True, "preview": preview}
+
+        except subprocess.TimeoutExpired:
+            return {"ok": False, "error": "Preview timed out"}
+        except subprocess.CalledProcessError as e:
+            # yt-dlp error output is in e.output
+            msg = (e.output or "").strip()
+            # keep it short for UI
+            msg = msg.splitlines()[-1] if msg else "yt-dlp failed"
+            return {"ok": False, "error": msg}
+        except Exception as e:
+            return {"ok": False, "error": repr(e)}
+
+
+def _fmt_duration(seconds: int | None) -> str:
+    if not seconds or seconds < 0:
+        return ""
+    h = seconds // 3600
+    m = (seconds % 3600) // 60
+    s = seconds % 60
+    return f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"

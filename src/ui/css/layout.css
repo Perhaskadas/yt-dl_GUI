@@ -65,3 +65,44 @@
   width: 0%;
   transition: width 180ms ease;
 }
+
+.hidden { display: none; }
+
+.panel-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.preview-row { display: flex; gap: 12px; align-items: flex-start; }
+
+.preview-thumb {
+  width: 180px;
+  height: 101px; /* 16:9 */
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  object-fit: cover;
+  background: var(--log-bg);
+}
+
+.preview-meta { min-width: 0; flex: 1; }
+
+.preview-title {
+  font-weight: 650;
+  color: var(--text-strong);
+  margin-bottom: 6px;
+}
+
+.preview-sub, .preview-note {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.preview-actions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+}
