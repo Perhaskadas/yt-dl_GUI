@@ -47,6 +47,10 @@
 
   --error-border: rgba(255, 120, 120, 0.28);
   --error-tint: rgba(255, 120, 120, 0.35);
+
+  --tooltip-bg: rgba(18, 24, 38, 0.95);
+  --tooltip-text: var(--text);
+  --tooltip-border: var(--line);
 }
 
 html[data-theme="light"] {
@@ -97,6 +101,10 @@ html[data-theme="light"] {
 
   --error-border: rgba(180, 30, 40, 0.28);
   --error-tint: rgba(180, 30, 40, 0.18);
+
+  --tooltip-bg: rgba(255, 255, 255, 0.96);
+  --tooltip-text: #0b1220;
+  --tooltip-border: rgba(11,18,32,0.12);
 }
 
 html[data-theme="light"] .btn.primary:hover {
