@@ -20,6 +20,7 @@ class Api:
         self._ui_lock = threading.Lock()
         self._progress_max = 0.0
         self._last_out_dir = ""
+        self._cookies_browser: str = ""
 
     def attach_window(self, window):
         self.window = window
@@ -64,7 +65,7 @@ class Api:
             self.window.evaluate_js(f"ui.onJobEnd({code}, {out_dir_json})")
 
     # ---------- JS-callable methods ----------
-    def start_download(self, url: str, out_dir: str):
+    def start_download(self, url: str, out_dir: str, preset: str = "best", cookies_browser: str = ""):
         url = (url or "").strip()
         out_dir = (out_dir or "").strip()
 
@@ -77,13 +78,18 @@ class Api:
         if self.active_job_id is not None:
             return {"ok": False, "error": "A job is already running"}
         
-        self._last_out_dir = out_dir
-
+        if cookies_browser:
+            self._cookies_browser = cookies_browser.lower()
+        
         # Start runner
+        self._last_out_dir = out_dir
         self._progress_max = 0.0
+
         job_id = self.runner.start_ytdlp(
             url=url,
             out_dir=out_dir,
+            preset=preset,
+            cookies_browser=(cookies_browser or self._cookies_browser),
             on_log=self._ui_log,
             on_progress=self._ui_progress,
             on_done=self._on_done,
@@ -125,40 +131,50 @@ class Api:
         except Exception as e:
             return {"ok": False, "error": repr(e)}
         
-    def probe(self, url: str):
+    def probe(self, url: str, cookies_browser: str = ""):
         url = (url or "").strip()
         if not url:
             return {"ok": False, "error": "Missing URL"}
 
-        # quick scheme check (don’t overthink; yt-dlp will validate too)
-        try:
-            p = urlparse(url)
-            if p.scheme not in ("http", "https"):
-                return {"ok": False, "error": "URL must start with http:// or https://"}
-        except Exception:
-            return {"ok": False, "error": "Invalid URL"}
+        args = [sys.executable, "-m", "yt_dlp"]
 
-        args = [sys.executable, "-m", "yt_dlp", 
+        b = (cookies_browser or self._cookies_browser or "").strip().lower()
+        if b:
+            args += ["--cookies-from-browser", b]
+
+        args += [
             "--dump-single-json",
             "--no-playlist",
-            "--cookies-from-browser", "firefox",
             "--skip-download",
-            "--quiet",
-            "--no-warnings",
             url,
         ]
 
         try:
             t0 = time.time()
-            out = subprocess.check_output(
+            proc = subprocess.run(
                 args,
+                stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
                 encoding="utf-8",
                 errors="replace",
-                timeout=15,
+                timeout=20,
             )
-            data = json.loads(out)
+
+            out = (proc.stdout or "").strip()
+
+            if proc.returncode != 0:
+                # show last line as a short error, but also hint cookies
+                last = out.splitlines()[-1] if out else "yt-dlp failed"
+                low = out.lower()
+                if "cookies" in low or "sign in" in low or "login" in low:
+                    last = "Preview needs cookies. Select a browser in Cookies and retry."
+                return {"ok": False, "error": last}
+
+            data = _extract_first_json(out)
+            if data is None:
+                msg = "Could not parse preview data. Try switching Cookies, then Refresh."
+                return {"ok": False, "error": msg}
 
             duration = data.get("duration")
             preview = {
@@ -172,19 +188,25 @@ class Api:
                 "extractor": data.get("extractor") or "",
                 "took_ms": int((time.time() - t0) * 1000),
             }
-
             return {"ok": True, "preview": preview}
 
         except subprocess.TimeoutExpired:
             return {"ok": False, "error": "Preview timed out"}
-        except subprocess.CalledProcessError as e:
-            # yt-dlp error output is in e.output
-            msg = (e.output or "").strip()
-            # keep it short for UI
-            msg = msg.splitlines()[-1] if msg else "yt-dlp failed"
-            return {"ok": False, "error": msg}
         except Exception as e:
             return {"ok": False, "error": repr(e)}
+        
+    def set_cookies_browser(self, browser: str):
+        self._cookies_browser = (browser or "").strip().lower()
+        return {"ok": True}
+    
+    def _ytdlp_base_args(self, cookies_browser: str | None = None) -> list[str]:
+        b = (cookies_browser or self._cookies_browser or "").strip().lower()
+        args = [sys.executable, "-m", "yt_dlp"]  # IMPORTANT: yt_dlp module name
+        if b:
+            args += ["--cookies-from-browser", b]
+        return args
+
+
 
 
 def _fmt_duration(seconds: int | None) -> str:
@@ -194,3 +216,17 @@ def _fmt_duration(seconds: int | None) -> str:
     m = (seconds % 3600) // 60
     s = seconds % 60
     return f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
+
+def _extract_first_json(text: str) -> dict | None:
+    if not text:
+        return None
+
+    i = text.find("{")
+    if i == -1:
+        return None
+
+    try:
+        obj, _ = json.JSONDecoder().raw_decode(text[i:])
+        return obj if isinstance(obj, dict) else None
+    except Exception:
+        return None

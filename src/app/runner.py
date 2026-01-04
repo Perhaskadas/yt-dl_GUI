@@ -33,6 +33,8 @@ class Runner:
         self,
         url: str,
         out_dir: str,
+        preset: str,
+        cookies_browser: str,
         on_log: LogFn,
         on_progress: ProgressFn,
         on_done: DoneFn,
@@ -46,7 +48,7 @@ class Runner:
 
         t = threading.Thread(
             target=self._run_ytdlp,
-            args=(handle, url, out_dir, on_log, on_progress, on_done),
+            args=(handle, url, out_dir, preset, cookies_browser, on_log, on_progress, on_done),
             daemon=True,
         )
         t.start()
@@ -81,74 +83,88 @@ class Runner:
         handle: JobHandle,
         url: str,
         out_dir: str,
+        preset: str,
+        cookies_browser: str,
         on_log: LogFn,
         on_progress: ProgressFn,
         on_done: DoneFn,
     ) -> None:
         return_code = 1
         try:
-            on_log(f"[runner] starting download")
+            on_log("[runner] starting download")
             on_log(f"[runner] url={url}")
             on_log(f"[runner] out_dir={out_dir}")
-            
+            on_log(f"[runner] preset={preset}")
+            on_log(f"[runner] cookies={cookies_browser or '(none)'}")
+
             out_dir = (out_dir or "").strip()
-            if not out_dir:
-                args = [
-                    sys.executable, "-m", "yt_dlp",
-                    "--cookies-from-browser", "firefox",
-                    url,
-                    "-f", "bv*+ba/best",
-                    "--newline",
-                ]
+            preset = (preset or "best").strip().lower()
+            cookies_browser = (cookies_browser or "").strip().lower()
+
+            # Base command: run yt-dlp from the current venv
+            args: list[str] = [sys.executable, "-m", "yt_dlp"]
+
+            # Cookies (optional)
+            if cookies_browser:
+                args += ["--cookies-from-browser", cookies_browser]
+
+            # Presets -> yt-dlp flags
+            if preset == "best":
+                args += ["-f", "bv*+ba/best"]
+            elif preset == "1080p":
+                args += ["-f", "bv*[height<=1080]+ba/best[height<=1080]"]
+            elif preset in ("videoonly", "video_only", "video"):
+                args += ["-f", "bv*"]
+            elif preset == "audio":
+                args += ["-f", "ba"]
+            elif preset == "mp3":
+                args += ["-f", "ba", "-x", "--audio-format", "mp3"]
             else:
-                args = [sys.executable, "-m", "yt_dlp", 
-                        url,
-                        "-P", out_dir,
-                        "-f", "bv*+ba/best",
-                        "--newline"]
+                on_log(f"[runner] unknown preset '{preset}', falling back to best")
+                args += ["-f", "bv*+ba/best"]
+
+            # Output folder (optional)
+            if out_dir:
+                args += ["-P", out_dir]
+
+            # URL + progress-friendly output
+            args += ["--newline", url]
+
             on_log("[runner] cmd: " + " ".join(args))
 
-            # Run the yt-dlp command in a subprocess
             proc = subprocess.Popen(
-                    args,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
-                    text=True,
-                    encoding="utf-8",
-                    errors="replace",
-                    bufsize=1,
-                )
-            # Store the Popen so that we can read from it later
-            handle.proc = proc   
+                args,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                bufsize=1,
+            )
+            handle.proc = proc
 
-            assert proc.stdout is not None   
+            assert proc.stdout is not None
 
             for line in proc.stdout:
-                # log stdout
                 text = line.rstrip("\n")
                 on_log(text)
 
-                # Try to parse the percentage out of the logs
                 m = DOWNLOAD_PCT_RE.search(text)
                 if m:
                     try:
-                        pct = float(m.group(1))
-                        on_progress(pct)
+                        on_progress(float(m.group(1)))
                     except ValueError:
                         pass
 
-                # handle stop command
                 if handle.stop_event.is_set():
                     on_log("[runner] stop requested; terminating yt-dlp...")
                     proc.terminate()
                     break
-            if proc.stdout:
-                proc.stdout.close()
 
+            proc.stdout.close()
             return_code = proc.wait(timeout=10)
 
         except subprocess.TimeoutExpired:
-            # If terminate didn't work, kill it
             on_log("[runner] terminate timed out; killing yt-dlp...")
             if handle.proc and handle.proc.poll() is None:
                 handle.proc.kill()
@@ -157,7 +173,7 @@ class Runner:
         except Exception as e:
             on_log(f"[runner] error: {e!r}")
             return_code = 1
-            
+
         finally:
             handle.proc = None
             on_done(return_code)

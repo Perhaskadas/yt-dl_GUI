@@ -1,4 +1,4 @@
-const logEl = document.getElementById("log");
+const logEl = document.getElementById("logEl");
 const statusEl = document.getElementById("status");
 const urlEl = document.getElementById("url");
 const outEl = document.getElementById("outDir");
@@ -11,6 +11,9 @@ const doneTitle = document.getElementById("doneTitle");
 const doneText = document.getElementById("doneText");
 const btnOpenFolder = document.getElementById("btnOpenFolder");
 const btnNextDownload = document.getElementById("btnNextDownload");
+const presetEl = document.getElementById("presetEl");
+const cookiesEl = document.getElementById("cookiesEl");
+
 
 let lastOutDir = "";
 
@@ -73,14 +76,15 @@ browseBtn.addEventListener("click", async () => {
 downloadBtn.addEventListener("click", async () => {
   const url = urlEl.value.trim();
   const outDir = outEl.value.trim();
-  
+  const preset = presetEl.value || "best";
+  const cookies = cookiesEl.value || "";
+
+  // Validate first
   const problems = [];
   if (!url) problems.push("Enter a URL.");
   else if (!isLikelyUrl(url)) problems.push("URL must start with http:// or https://");
-  
-  // Force folder selection (as you wanted)
   if (!outDir) problems.push("Select an output folder.");
-  
+
   if (problems.length) {
     statusEl.textContent = "Fix input";
     showToastList(problems);
@@ -96,7 +100,7 @@ downloadBtn.addEventListener("click", async () => {
     progressBar.style.width = "0%";
     statusEl.textContent = "Starting…";
 
-    const res = await pywebview.api.start_download(url, outDir);
+    const res = await pywebview.api.start_download(url, outDir, preset, cookies);
     log(`[python] ${JSON.stringify(res)}`);
 
     if (!res.ok) {
@@ -111,6 +115,7 @@ downloadBtn.addEventListener("click", async () => {
     showToast("Unexpected error. Check logs.");
   }
 });
+
 
 
 stopBtn.addEventListener("click", async () => {
@@ -291,7 +296,7 @@ async function runPreview(url) {
   const myId = ++previewReqId;
 
   try {
-    const res = await pywebview.api.probe(url);
+    const res = await pywebview.api.probe(url, cookiesEl.value || "");
 
     // ignore stale responses (user typed another URL)
     if (myId !== previewReqId) return;
@@ -341,6 +346,35 @@ function setTheme(theme, animate = true) {
 
   localStorage.setItem("theme", theme);
 }
+
+function loadOptions() {
+  presetEl.value = localStorage.getItem("preset") || "best";
+  cookiesEl.value = localStorage.getItem("cookies_browser") || "";
+}
+
+async function syncOptionsToPython() {
+  localStorage.setItem("preset", presetEl.value || "best");
+  localStorage.setItem("cookies_browser", cookiesEl.value || "");
+
+  // make python aware of cookie choice for probe/download
+  try {
+    await pywebview.api.set_cookies_browser(cookiesEl.value || "");
+  } catch (e) {
+    // ignore if python not ready yet; logs will show
+    log(`[ui] set_cookies_browser failed: ${e}`);
+  }
+}
+
+presetEl.addEventListener("change", syncOptionsToPython);
+cookiesEl.addEventListener("change", async () => {
+  await syncOptionsToPython();
+  // re-run preview with new cookies choice
+  runPreview(urlEl.value);
+});
+
+loadOptions();
+syncOptionsToPython();
+
 
 function initTheme() {
   const saved = localStorage.getItem("theme");
