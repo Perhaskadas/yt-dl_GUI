@@ -5,9 +5,8 @@ import json
 import os
 import subprocess
 import sys
-import threading
 import time
-from urllib.parse import urlparse
+from queue import SimpleQueue, Empty
 import webview
 from app.runner import Runner
 
@@ -17,10 +16,10 @@ class Api:
         self.window = None
         self.runner = Runner()
         self.active_job_id: str | None = None
-        self._ui_lock = threading.Lock()
         self._progress_max = 0.0
         self._last_out_dir = ""
         self._cookies_browser: str = ""
+        self._ui_events: SimpleQueue[dict[str, object]] = SimpleQueue()
 
     def attach_window(self, window):
         self.window = window
@@ -32,12 +31,13 @@ class Api:
 
 
     # ---------- helpers to safely talk to UI ----------
+    def _enqueue_ui_event(self, event: dict[str, object]) -> None:
+        self._ui_events.put(event)
+
     def _ui_log(self, line: str):
         if not self.window:
             return
-        payload = json.dumps(line)
-        with self._ui_lock:
-            self.window.evaluate_js(f"ui.onLog({payload})")
+        self._enqueue_ui_event({"type": "log", "line": line})
 
     def _ui_progress(self, pct: float):
         if not self.window:
@@ -53,16 +53,13 @@ class Api:
         else:
             self._progress_max = pct
 
-        with self._ui_lock:
-            self.window.evaluate_js(f"ui.onProgress({pct})")
+        self._enqueue_ui_event({"type": "progress", "pct": pct})
 
     def _ui_done(self, code: int):
         if not self.window:
             return
         
-        out_dir_json = json.dumps(self._last_out_dir)
-        with self._ui_lock:
-            self.window.evaluate_js(f"ui.onJobEnd({code}, {out_dir_json})")
+        self._enqueue_ui_event({"type": "done", "code": code, "out_dir": self._last_out_dir})
 
     # ---------- JS-callable methods ----------
     def start_download(self, url: str, out_dir: str, preset: str = "best", cookies_browser: str = ""):
@@ -198,6 +195,18 @@ class Api:
     def set_cookies_browser(self, browser: str):
         self._cookies_browser = (browser or "").strip().lower()
         return {"ok": True}
+
+    def poll_events(self, limit: int = 200) -> list[dict[str, object]]:
+        items: list[dict[str, object]] = []
+        if limit <= 0:
+            return items
+
+        while len(items) < limit:
+            try:
+                items.append(self._ui_events.get_nowait())
+            except Empty:
+                break
+        return items
     
     def _ytdlp_base_args(self, cookies_browser: str | None = None) -> list[str]:
         b = (cookies_browser or self._cookies_browser or "").strip().lower()

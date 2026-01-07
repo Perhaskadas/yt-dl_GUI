@@ -64,6 +64,36 @@ window.ui = {
   },
 };
 
+function handleUiEvent(event) {
+  if (!event || !event.type) return;
+  if (event.type === "log") {
+    window.ui.onLog(event.line);
+  } else if (event.type === "progress") {
+    window.ui.onProgress(event.pct);
+  } else if (event.type === "done") {
+    window.ui.onJobEnd(event.code, event.out_dir);
+  }
+}
+
+let pollInFlight = false;
+
+async function pollEvents() {
+  if (pollInFlight) return;
+  pollInFlight = true;
+  try {
+    const events = await pywebview.api.poll_events();
+    if (Array.isArray(events)) {
+      events.forEach(handleUiEvent);
+    }
+  } catch (e) {
+    log(`[ui] poll_events failed: ${e}`);
+  } finally {
+    pollInFlight = false;
+  }
+}
+
+window.setInterval(pollEvents, 200);
+
 browseBtn.addEventListener("click", async () => {
   try {
     const folder = await pywebview.api.choose_folder();
