@@ -9,7 +9,8 @@ description = "A GUI wrapper for yt-dlp using pywebview"
 requires-python = ">=3.10"
 dependencies = [
   "pywebview>=5.0",
-  "yt-dlp>=2024.0.0"
+  "yt-dlp>=2024.0.0",
+  "yt-dlp-ejs>=2024.0.0"
 ]
 
 [tool.setuptools]
@@ -19,4 +20,4 @@ package-dir = {"" = "src"}
 where = ["src"]
 
 [tool.yt-dlp-gui]
-requires = ["ffmpeg (system dependency)"]
+system-requires = ["ffmpeg", "deno"]
