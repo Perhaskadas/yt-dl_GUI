@@ -14,7 +14,7 @@ from app.runner import Runner
 
 class Api:
     def __init__(self):
-        self.window = None
+        self._window = None
         self.runner = Runner()
         self.active_job_id: str | None = None
         self._ui_lock = threading.Lock()
@@ -23,24 +23,24 @@ class Api:
         self._cookies_browser: str = ""
 
     def attach_window(self, window):
-        self.window = window
+        self._window = window
 
     def choose_folder(self):
-        assert self.window is not None
-        folders = self.window.create_file_dialog(webview.FileDialog.FOLDER)
+        assert self._window is not None
+        folders = self._window.create_file_dialog(webview.FileDialog.FOLDER)
         return folders[0] if folders else None
 
 
     # ---------- helpers to safely talk to UI ----------
     def _ui_log(self, line: str):
-        if not self.window:
+        if not self._window:
             return
         payload = json.dumps(line)
         with self._ui_lock:
-            self.window.evaluate_js(f"ui.onLog({payload})")
+            self._window.evaluate_js(f"ui.onLog({payload})")
 
     def _ui_progress(self, pct: float):
-        if not self.window:
+        if not self._window:
             return
 
         pct = max(0.0, min(100.0, pct))
@@ -54,15 +54,15 @@ class Api:
             self._progress_max = pct
 
         with self._ui_lock:
-            self.window.evaluate_js(f"ui.onProgress({pct})")
+            self._window.evaluate_js(f"ui.onProgress({pct})")
 
     def _ui_done(self, code: int):
-        if not self.window:
+        if not self._window:
             return
         
         out_dir_json = json.dumps(self._last_out_dir)
         with self._ui_lock:
-            self.window.evaluate_js(f"ui.onJobEnd({code}, {out_dir_json})")
+            self._window.evaluate_js(f"ui.onJobEnd({code}, {out_dir_json})")
 
     # ---------- JS-callable methods ----------
     def start_download(self, url: str, out_dir: str, preset: str = "best", cookies_browser: str = ""):

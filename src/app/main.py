@@ -14,8 +14,12 @@ def main():
         height=700,
     )
 
-    api.attach_window(window)
-    webview.start()
+    def on_ready():
+        # Attach after pywebview finishes JS API introspection to avoid recursion
+        print(f"pywebview renderer: {webview.renderer}.")
+        api.attach_window(window)
+
+    webview.start(on_ready)
 
 if __name__ == "__main__":
     main()
