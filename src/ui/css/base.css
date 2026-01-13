@@ -1,126 +1,174 @@
-* { box-sizing: border-box; }
+﻿* { box-sizing: border-box; }
 html, body { height: 100%; }
 
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-family: "Google Sans", "Product Sans", "Noto Sans", "Segoe UI Variable", "Segoe UI", sans-serif;
   background:
-    radial-gradient(1200px 600px at 20% 0%, var(--bg-grad-1), transparent),
-    radial-gradient(1000px 800px at 100% 30%, var(--bg-grad-2), transparent),
-    var(--bg);
-  color: var(--text);
+    radial-gradient(900px 600px at 10% -10%, var(--bg-grad-1), transparent 60%),
+    radial-gradient(800px 600px at 90% 10%, var(--bg-grad-2), transparent 65%),
+    radial-gradient(700px 600px at 50% 100%, var(--bg-grad-3), transparent 60%),
+    var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(1200px 600px at 15% 0%, var(--glow-1), transparent 60%),
+    radial-gradient(1000px 700px at 85% 20%, var(--glow-2), transparent 65%),
+    radial-gradient(900px 800px at 50% 100%, var(--glow-3), transparent 65%),
+    repeating-linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.03) 2px, transparent 2px, transparent 8px);
+  mix-blend-mode: screen;
+  opacity: 0.6;
+}
+
+html[data-theme="light"] body::before {
+  background:
+    radial-gradient(1200px 600px at 15% 0%, var(--glow-1), transparent 60%),
+    radial-gradient(1000px 700px at 85% 20%, var(--glow-2), transparent 65%),
+    radial-gradient(900px 800px at 50% 100%, var(--glow-3), transparent 65%),
+    radial-gradient(circle, rgba(32,33,36,0.16) 1.4px, transparent 2px) 0 0 / 18px 18px;
+  mix-blend-mode: multiply;
+  opacity: 0.35;
 }
 
 .card {
-  padding: 16px;
-  border: 1px solid var(--line);
-  border-radius: var(--r);
-  background: linear-gradient(180deg, var(--glass-1), var(--glass-2));
-  box-shadow: var(--shadow);
+  padding: 18px 18px 20px;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, var(--surface-container-high), var(--surface-container));
+  box-shadow: var(--shadow-1);
 }
 
 .btn {
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid var(--line);
-  background: var(--btn-bg);
-  color: var(--text);
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  background: var(--btn-tonal);
+  color: var(--md-sys-color-on-surface);
   cursor: pointer;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  transition: transform 140ms ease, box-shadow 140ms ease, filter 140ms ease;
 }
 
-.btn:hover { background: var(--btn-bg-hover); }
-.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn:hover { filter: brightness(1.05); box-shadow: 0 6px 16px rgba(0,0,0,0.16); }
+.btn:active { transform: translateY(1px) scale(0.99); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
 
 .btn.primary {
-  background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  background: var(--btn-filled);
   border: 0;
-  color: var(--btn-primary-text);
+  color: var(--md-sys-color-on-primary);
   font-weight: 650;
 }
 
 .btn.ghost {
   background: transparent;
+  border-color: transparent;
+  color: var(--text-soft);
+}
+
+.btn:focus-visible,
+.input:focus-visible,
+select:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ring);
 }
 
 .input {
   width: 100%;
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid var(--line);
-  background: var(--field-bg);
-  color: var(--text);
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  background: var(--surface-container-low);
+  color: var(--md-sys-color-on-surface);
   outline: none;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
 }
 
 .input:focus {
-  border-color: var(--focus-border);
-  box-shadow: 0 0 0 3px var(--focus-ring);
+  border-color: var(--md-sys-color-primary);
+  box-shadow: 0 0 0 3px var(--ring);
 }
 
 h2 {
-  margin: 0 0 12px;
-  font-size: 14px;
-  color: var(--text-strong);
+  margin: 0 0 6px;
+  font-size: 16px;
+  letter-spacing: 0.3px;
+  color: var(--md-sys-color-on-surface);
+}
+
+.section-head { margin-bottom: 12px; }
+.section-head.compact { margin-bottom: 0; }
+.section-sub {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 .label {
   display: block;
-  margin: 10px 0 6px;
+  margin: 12px 0 6px;
   font-size: 12px;
-  color: var(--muted);
+  color: var(--text-muted);
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
 }
 
-.pill {
-  padding: 8px 10px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  color: var(--text-soft);
-  background: var(--pill-bg);
-  font-size: 12px;
-}
+.muted { margin-top: 10px; font-size: 12px; color: var(--text-muted); }
 
-.muted { margin-top: 10px; font-size: 12px; color: var(--muted); }
-
-/* Smooth transitions when theme changes */
-html.theme-animating body,
-html.theme-animating .card,
-html.theme-animating .btn,
-html.theme-animating .input,
-html.theme-animating .log,
-html.theme-animating .pill,
-html.theme-animating .progress,
-html.theme-animating .modal,
-html.theme-animating .toast {
-  transition:
-    background-color 280ms ease,
-    color 280ms ease,
-    border-color 280ms ease,
-    box-shadow 280ms ease,
-    filter 280ms ease;
-}
-
-/* Toggle button layout */
 .theme-toggle {
-  width: 44px;
+  width: 46px;
   height: 40px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0;
   position: relative;
   overflow: hidden;
 }
 
-/* Icons stacked and animated */
 .theme-toggle .icon-sun,
 .theme-toggle .icon-moon {
   position: absolute;
-  font-size: 16px;
-  line-height: 1;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
   transition: transform 400ms ease, opacity 400ms ease;
 }
 
-/* Default (dark): show moon */
+.theme-toggle .icon-sun {
+  background: var(--icon-sun);
+  box-shadow: 0 0 0 4px rgba(255,210,120,0.2);
+}
+
+.theme-toggle .icon-sun::before {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,210,120,0.4);
+}
+
+.theme-toggle .icon-moon {
+  background: var(--icon-moon);
+}
+
+.theme-toggle .icon-moon::before {
+  content: "";
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--icon-moon-cut);
+  top: 1px;
+  left: 6px;
+}
+
 html[data-theme="dark"] .theme-toggle .icon-moon {
   opacity: 1;
   transform: translateY(0) rotate(0deg);
@@ -130,7 +178,6 @@ html[data-theme="dark"] .theme-toggle .icon-sun {
   transform: translateY(14px) rotate(-30deg);
 }
 
-/* Light: show sun */
 html[data-theme="light"] .theme-toggle .icon-sun {
   opacity: 1;
   transform: translateY(0) rotate(0deg);
@@ -140,7 +187,6 @@ html[data-theme="light"] .theme-toggle .icon-moon {
   transform: translateY(14px) rotate(30deg);
 }
 
-/* Click animation: sun sets / moon rises */
 html.theme-animating.to-light .theme-toggle .icon-moon {
   opacity: 0;
   transform: translateY(14px) rotate(30deg);
@@ -159,22 +205,48 @@ html.theme-animating.to-dark .theme-toggle .icon-moon {
   transform: translateY(0) rotate(0deg);
 }
 
-/* Respect reduced motion */
-@media (prefers-reduced-motion: reduce) {
-  html.theme-animating body,
-  html.theme-animating .card,
-  html.theme-animating .btn,
-  html.theme-animating .input,
-  html.theme-animating .log,
-  html.theme-animating .pill,
-  html.theme-animating .progress,
-  html.theme-animating .modal,
-  html.theme-animating .toast {
-    transition: none;
-  }
+.reveal {
+  opacity: 0;
+  transform: translateY(10px) scale(0.99);
+  animation: riseIn 600ms ease forwards;
+}
 
-  .theme-toggle .icon-sun,
-  .theme-toggle .icon-moon {
-    transition: none;
+.reveal.delay-1 { animation-delay: 120ms; }
+.reveal.delay-2 { animation-delay: 220ms; }
+
+@keyframes riseIn {
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn,
+  .theme-toggle .icon-sun,
+  .theme-toggle .icon-moon,
+  .input,
+  .reveal {
+    transition: none;
+    animation: none;
+    transform: none;
+  }
+}
+
+html.theme-animating body,
+html.theme-animating .card,
+html.theme-animating .btn,
+html.theme-animating .input,
+html.theme-animating .log,
+html.theme-animating .progress,
+html.theme-animating .modal,
+html.theme-animating .toast,
+html.theme-animating .topbar,
+html.theme-animating .brand-mark {
+  transition:
+    background-color 280ms ease,
+    color 280ms ease,
+    border-color 280ms ease,
+    box-shadow 280ms ease,
+    filter 280ms ease;
 }

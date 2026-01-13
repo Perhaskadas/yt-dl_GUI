@@ -1,5 +1,5 @@
-<!doctype html>
-<html data-theme="light">
+﻿<!doctype html>
+<html data-theme="dark">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -13,19 +13,19 @@
 
   <body>
     <div class="app">
-      <header class="topbar">
-        <div class="title">
-          <div class="logo"></div>
-          <div>
-            <div class="name">yt-dlp GUI</div>
-            <div class="sub">Product of S.L</div>
+      <header class="topbar reveal">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true"></div>
+          <div class="brand-copy">
+            <div class="brand-title">yt-dlp</div>
+            <div class="brand-sub">Expressive desktop toolkit</div>
           </div>
         </div>
 
         <div class="actions">
           <button id="themeToggle" class="btn ghost theme-toggle" aria-label="Toggle theme" title="Toggle theme">
-            <span class="icon-sun" aria-hidden="true">☀</span>
-            <span class="icon-moon" aria-hidden="true">🌙</span>
+            <span class="icon-sun" aria-hidden="true"></span>
+            <span class="icon-moon" aria-hidden="true"></span>
           </button>
           <button id="btnStop" class="btn ghost" disabled>Stop</button>
           <button id="btnDownload" class="btn primary">Download</button>
@@ -33,16 +33,18 @@
       </header>
 
       <main class="grid">
-        <section class="card">
-          <h2>Download</h2>
+        <section class="card reveal delay-1">
+          <div class="section-head">
+            <h2>Download</h2>
+          </div>
 
           <label class="label">URL</label>
-          <input id="url" class="input" placeholder="Paste a video / playlist URL…" />
+          <input id="url" class="input" placeholder="Paste a video or playlist URL" />
 
           <div class="row">
             <div class="grow">
               <label class="label">Output folder</label>
-              <input id="outDir" class="input" placeholder="Choose a folder…" />
+              <input id="outDir" class="input" placeholder="Choose a folder" />
             </div>
             <div class="row-end">
               <label class="label">&nbsp;</label>
@@ -50,17 +52,16 @@
             </div>
           </div>
 
-          <!-- Options -->
           <div class="row">
             <div class="grow">
               <label class="label inline">
                 Preset
-                <span class="info-tip" tabindex="0" aria-label="Preset info">ⓘ
+                <span class="info-tip" tabindex="0" aria-label="Preset info">
                   <span class="info-tip-content">
                     <strong>Best (video+audio)</strong><br>
                     Highest quality video and audio.<br>
                     Best for normal watching.<br><br>
-                    
+
                     <strong>Best up to 1080p</strong><br>
                     Limits video to 1080p to save space.<br>
                     Great balance of quality and size.<br><br>
@@ -68,15 +69,14 @@
                     <strong>Best (video only)</strong><br>
                     Highest quality video, no audio.<br>
                     Useful for editing or adding audio later.<br><br>
-                    
-                      <strong>Audio only (best)</strong><br>
-                      Downloads original high-quality audio.<br>
-                      Fast and smallest files.<br><br>
 
-                      <strong>Audio only (MP3)</strong><br>
-                      Converts audio to MP3 for compatibility.<br>
-                      Slightly larger and slower.
+                    <strong>Audio only (best)</strong><br>
+                    Downloads original high-quality audio.<br>
+                    Fast and smallest files.<br><br>
 
+                    <strong>Audio only (MP3)</strong><br>
+                    Converts audio to MP3 for compatibility.<br>
+                    Slightly larger and slower.
                   </span>
                 </span>
               </label>
@@ -91,14 +91,13 @@
             </div>
           </div>
 
-
           <div class="grow">
             <label class="label inline">
               Cookies
-              <span class="info-tip" tabindex="0" aria-label="Cookies info">ⓘ
+              <span class="info-tip" tabindex="0" aria-label="Cookies info">
                 <span class="info-tip-content">
                   Sometimes your login cookies are required to download a movie.<br>
-                  If downloads aren't working select a browser where you are logged into the website.
+                  If downloads are not working select a browser where you are logged into the website.
                 </span>
               </span>
             </label>
@@ -117,10 +116,11 @@
           <div class="muted" id="status">Idle</div>
         </section>
 
-
-        <section class="card">
+        <section class="card reveal delay-2">
           <div class="panel-top">
-            <h2>Preview</h2>
+            <div class="section-head compact">
+              <h2>Preview</h2>
+            </div>
             <button id="toggleLogsBtn" class="btn ghost">Show logs</button>
           </div>
 
@@ -144,11 +144,9 @@
             </div>
           </div>
         </section>
-
       </main>
     </div>
-    
-    <!-- Download Complete Popup -->
+
     <div id="doneModal" class="modal hidden">
       <div class="modal-content card">
         <h2 id="doneTitle">Download finished</h2>
@@ -160,9 +158,7 @@
         </div>
       </div>
     </div>
-    
-    <!-- Incomplete/incorrect form popup -->
-    <div id="toast" class="toast hidden"></div>
 
+    <div id="toast" class="toast hidden"></div>
   </body>
 </html>

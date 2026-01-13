@@ -17,6 +17,105 @@ const cookiesEl = document.getElementById("cookiesEl");
 
 let lastOutDir = "";
 
+const tipTriggers = document.querySelectorAll(".info-tip");
+let openTip = null;
+
+function positionTip(tip) {
+  const content = tip.querySelector(".info-tip-content");
+  if (!content) return;
+
+  const rect = tip.getBoundingClientRect();
+  const margin = 8;
+  const viewportWidth = document.documentElement.clientWidth;
+  const viewportHeight = document.documentElement.clientHeight;
+
+  content.style.top = "0px";
+  content.style.left = "0px";
+
+  const contentRect = content.getBoundingClientRect();
+  let top = rect.top - contentRect.height - 8;
+  if (top < margin) {
+    top = rect.bottom + 8;
+  }
+  if (top + contentRect.height > viewportHeight - margin) {
+    top = Math.max(margin, viewportHeight - margin - contentRect.height);
+  }
+
+  let left = rect.left;
+  if (left + contentRect.width > viewportWidth - margin) {
+    left = viewportWidth - margin - contentRect.width;
+  }
+  left = Math.max(margin, left);
+
+  content.style.top = `${Math.round(top)}px`;
+  content.style.left = `${Math.round(left)}px`;
+}
+
+function closeTip(tip) {
+  if (!tip) return;
+  tip.classList.remove("open");
+  tip.setAttribute("aria-expanded", "false");
+  const content = tip.querySelector(".info-tip-content");
+  if (content) {
+    const onEnd = (e) => {
+      if (e.propertyName !== "opacity") return;
+      content.style.top = "";
+      content.style.left = "";
+      content.removeEventListener("transitionend", onEnd);
+    };
+    content.addEventListener("transitionend", onEnd);
+  }
+  if (openTip === tip) openTip = null;
+}
+
+function openTipFor(tip) {
+  if (openTip && openTip !== tip) closeTip(openTip);
+  tip.classList.add("open");
+  tip.setAttribute("aria-expanded", "true");
+  openTip = tip;
+  requestAnimationFrame(() => positionTip(tip));
+}
+
+function toggleTip(tip) {
+  if (tip.classList.contains("open")) {
+    closeTip(tip);
+  } else {
+    openTipFor(tip);
+  }
+}
+
+tipTriggers.forEach((tip) => {
+  tip.setAttribute("aria-expanded", "false");
+  tip.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleTip(tip);
+  });
+  tip.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      toggleTip(tip);
+    }
+  });
+});
+
+document.addEventListener("click", (e) => {
+  if (!openTip) return;
+  if (openTip.contains(e.target)) return;
+  closeTip(openTip);
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && openTip) closeTip(openTip);
+});
+
+window.addEventListener("resize", () => {
+  if (openTip) positionTip(openTip);
+});
+
+window.addEventListener("scroll", () => {
+  if (openTip) positionTip(openTip);
+}, true);
+
 function showDoneModal(success, outDir) {
   lastOutDir = outDir || "";
   doneTitle.textContent = success ? "Download finished" : "Download failed";
