@@ -15,7 +15,7 @@ def main():
     )
 
     def on_ready():
-        # Attach after pywebview finishes JS API introspection to avoid recursion
+        # Attach after pywebview finishes JS API introspection to weird recursion limit bug
         print(f"pywebview renderer: {webview.renderer}.")
         api.attach_window(window)
 
