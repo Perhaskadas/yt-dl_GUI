@@ -91,78 +91,88 @@ class Runner:
     ) -> None:
         return_code = 1
         try:
-            on_log("[runner] starting download")
-            on_log(f"[runner] url={url}")
-            on_log(f"[runner] out_dir={out_dir}")
-            on_log(f"[runner] preset={preset}")
-            on_log(f"[runner] cookies={cookies_browser or '(none)'}")
-
-            out_dir = (out_dir or "").strip()
-            preset = (preset or "best").strip().lower()
-            cookies_browser = (cookies_browser or "").strip().lower()
-
-            # Base command: run yt-dlp from the current venv
-            args: list[str] = [sys.executable, "-m", "yt_dlp"]
-
-            # Cookies (optional)
-            if cookies_browser:
-                args += ["--cookies-from-browser", cookies_browser]
-
-            # Presets -> yt-dlp flags
-            if preset == "best":
-                args += ["-f", "bv*+ba/best"]
-            elif preset == "1080p":
-                args += ["-f", "bv*[height<=1080]+ba/best[height<=1080]"]
-            elif preset in ("videoonly", "video_only", "video"):
-                args += ["-f", "bv*"]
-            elif preset == "audio":
-                args += ["-f", "ba"]
-            elif preset == "mp3":
-                args += ["-f", "ba", "-x", "--audio-format", "mp3"]
+            if _use_inprocess_ytdlp():
+                return_code = self._run_ytdlp_inprocess(
+                    handle, url, out_dir, preset, cookies_browser, on_log, on_progress
+                )
             else:
-                on_log(f"[runner] unknown preset '{preset}', falling back to best")
-                args += ["-f", "bv*+ba/best"]
+                creationflags = 0
+                if sys.platform.startswith("win"):
+                    creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
-            # Output folder (optional)
-            if out_dir:
-                args += ["-P", out_dir]
+                on_log("[runner] starting download")
+                on_log(f"[runner] url={url}")
+                on_log(f"[runner] out_dir={out_dir}")
+                on_log(f"[runner] preset={preset}")
+                on_log(f"[runner] cookies={cookies_browser or '(none)'}")
 
-            # URL + progress-friendly output
-            args += ["--newline", url]
+                out_dir = (out_dir or "").strip()
+                preset = (preset or "best").strip().lower()
+                cookies_browser = (cookies_browser or "").strip().lower()
 
-            on_log("[runner] cmd: " + " ".join(args))
+                # Base command: run yt-dlp from the current venv
+                args: list[str] = [sys.executable, "-m", "yt_dlp"]
 
-            proc = subprocess.Popen(
-                args,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                encoding="utf-8",
-                errors="replace",
-                bufsize=1,
-            )
-            handle.proc = proc
+                # Cookies (optional)
+                if cookies_browser:
+                    args += ["--cookies-from-browser", cookies_browser]
 
-            assert proc.stdout is not None
+                # Presets -> yt-dlp flags
+                if preset == "best":
+                    args += ["-f", "bv*+ba/best"]
+                elif preset == "1080p":
+                    args += ["-f", "bv*[height<=1080]+ba/best[height<=1080]"]
+                elif preset in ("videoonly", "video_only", "video"):
+                    args += ["-f", "bv*"]
+                elif preset == "audio":
+                    args += ["-f", "ba"]
+                elif preset == "mp3":
+                    args += ["-f", "ba", "-x", "--audio-format", "mp3"]
+                else:
+                    on_log(f"[runner] unknown preset '{preset}', falling back to best")
+                    args += ["-f", "bv*+ba/best"]
 
-            for line in proc.stdout:
-                text = line.rstrip("\n")
-                on_log(text)
+                # Output folder (optional)
+                if out_dir:
+                    args += ["-P", out_dir]
 
-                m = DOWNLOAD_PCT_RE.search(text)
-                if m:
-                    try:
-                        on_progress(float(m.group(1)))
-                    except ValueError:
-                        pass
+                # URL + progress-friendly output
+                args += ["--newline", url]
 
-                if handle.stop_event.is_set():
-                    on_log("[runner] stop requested; terminating yt-dlp...")
-                    proc.terminate()
-                    break
+                on_log("[runner] cmd: " + " ".join(args))
 
-            proc.stdout.close()
-            return_code = proc.wait(timeout=10)
+                proc = subprocess.Popen(
+                    args,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    bufsize=1,
+                    creationflags=creationflags,
+                )
+                handle.proc = proc
+
+                assert proc.stdout is not None
+
+                for line in proc.stdout:
+                    text = line.rstrip("\n")
+                    on_log(text)
+
+                    m = DOWNLOAD_PCT_RE.search(text)
+                    if m:
+                        try:
+                            on_progress(float(m.group(1)))
+                        except ValueError:
+                            pass
+
+                    if handle.stop_event.is_set():
+                        on_log("[runner] stop requested; terminating yt-dlp...")
+                        proc.terminate()
+                        break
+
+                proc.stdout.close()
+                return_code = proc.wait(timeout=10)
 
         except subprocess.TimeoutExpired:
             on_log("[runner] terminate timed out; killing yt-dlp...")
@@ -178,3 +188,101 @@ class Runner:
             handle.proc = None
             on_done(return_code)
             self._finish(handle.job_id)
+
+    def _run_ytdlp_inprocess(
+        self,
+        handle: JobHandle,
+        url: str,
+        out_dir: str,
+        preset: str,
+        cookies_browser: str,
+        on_log: LogFn,
+        on_progress: ProgressFn,
+    ) -> int:
+        try:
+            import yt_dlp
+
+            on_log("[runner] starting download (in-process)")
+            on_log(f"[runner] url={url}")
+            on_log(f"[runner] out_dir={out_dir}")
+            on_log(f"[runner] preset={preset}")
+            on_log(f"[runner] cookies={cookies_browser or '(none)'}")
+
+            out_dir = (out_dir or "").strip()
+            preset = (preset or "best").strip().lower()
+            cookies_browser = (cookies_browser or "").strip().lower()
+
+            fmt = "bv*+ba/best"
+            if preset == "1080p":
+                fmt = "bv*[height<=1080]+ba/best[height<=1080]"
+            elif preset in ("videoonly", "video_only", "video"):
+                fmt = "bv*"
+            elif preset == "audio":
+                fmt = "ba"
+            elif preset == "mp3":
+                fmt = "ba"
+            elif preset != "best":
+                on_log(f"[runner] unknown preset '{preset}', falling back to best")
+
+            def progress_hook(d):
+                if handle.stop_event.is_set():
+                    raise yt_dlp.utils.DownloadError("Download cancelled")
+                if d.get("status") != "downloading":
+                    return
+                total = d.get("total_bytes") or d.get("total_bytes_estimate")
+                downloaded = d.get("downloaded_bytes")
+                if total and downloaded is not None:
+                    on_progress((downloaded / total) * 100.0)
+
+            ydl_opts: dict = {
+                "format": fmt,
+                "progress_hooks": [progress_hook],
+                "logger": _YtDlpLogger(on_log),
+            }
+
+            if out_dir:
+                ydl_opts["paths"] = {"home": out_dir}
+
+            if cookies_browser:
+                ydl_opts["cookiesfrombrowser"] = (cookies_browser,)
+
+            if preset == "mp3":
+                ydl_opts["postprocessors"] = [
+                    {
+                        "key": "FFmpegExtractAudio",
+                        "preferredcodec": "mp3",
+                    }
+                ]
+
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                ydl.download([url])
+
+            return 0
+        except Exception as e:
+            on_log(f"[runner] error: {e!r}")
+            return 1
+
+
+class _YtDlpLogger:
+    def __init__(self, on_log: LogFn):
+        self._on_log = on_log
+
+    def debug(self, msg: str):
+        if msg:
+            self._on_log(str(msg))
+
+    def info(self, msg: str):
+        if msg:
+            self._on_log(str(msg))
+
+    def warning(self, msg: str):
+        if msg:
+            self._on_log(f"[warn] {msg}")
+
+    def error(self, msg: str):
+        if msg:
+            self._on_log(f"[error] {msg}")
+
+
+def _use_inprocess_ytdlp() -> bool:
+    return bool(getattr(sys, "frozen", False))

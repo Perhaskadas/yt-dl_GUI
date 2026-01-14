@@ -464,6 +464,19 @@ async function syncOptionsToPython() {
   }
 }
 
+async function checkDependencies() {
+  try {
+    const res = await pywebview.api.system_status();
+    if (!res || !res.ok) return;
+    const missing = [];
+    if (!res.ffmpeg) missing.push("FFmpeg not found. Install FFmpeg and add it to PATH.");
+    if (!res.deno) missing.push("Deno not found. Install Deno and add it to PATH.");
+    if (missing.length) showToastList(missing, 4200);
+  } catch (e) {
+    log(`[ui] system_status failed: ${e}`);
+  }
+}
+
 presetEl.addEventListener("change", syncOptionsToPython);
 cookiesEl.addEventListener("change", async () => {
   await syncOptionsToPython();
@@ -473,6 +486,7 @@ cookiesEl.addEventListener("change", async () => {
 
 loadOptions();
 syncOptionsToPython();
+checkDependencies();
 
 
 function initTheme() {

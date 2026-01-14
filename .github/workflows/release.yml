@@ -40,6 +40,7 @@ jobs:
             --onefile `
             --name "yt-dlp-gui" `
             --icon "src/assets/yt-dlp-gui.ico" `
+            --collect-all webview `
             --add-data "src/ui;ui" `
             --add-data "src/assets;assets" `
             src/app/main.py
@@ -54,6 +55,7 @@ jobs:
             --onefile \
             --name "yt-dlp-gui" \
             --icon "src/assets/yt-dlp-gui.icns" \
+            --collect-all webview \
             --add-data "src/ui:ui" \
             --add-data "src/assets:assets" \
             src/app/main.py

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 import threading
@@ -136,6 +137,13 @@ class Api:
         if not url:
             return {"ok": False, "error": "Missing URL"}
 
+        if _use_inprocess_ytdlp():
+            return self._probe_inprocess(url, cookies_browser)
+
+        creationflags = 0
+        if sys.platform.startswith("win"):
+            creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+
         args = [sys.executable, "-m", "yt_dlp"]
 
         b = (cookies_browser or self._cookies_browser or "").strip().lower()
@@ -159,6 +167,7 @@ class Api:
                 encoding="utf-8",
                 errors="replace",
                 timeout=20,
+                creationflags=creationflags,
             )
 
             out = (proc.stdout or "").strip()
@@ -198,6 +207,54 @@ class Api:
     def set_cookies_browser(self, browser: str):
         self._cookies_browser = (browser or "").strip().lower()
         return {"ok": True}
+
+    def system_status(self):
+        return {
+            "ok": True,
+            "ffmpeg": shutil.which("ffmpeg") is not None,
+            "deno": shutil.which("deno") is not None,
+        }
+
+    def _probe_inprocess(self, url: str, cookies_browser: str = ""):
+        try:
+            import yt_dlp
+
+            ydl_opts: dict = {
+                "quiet": True,
+                "skip_download": True,
+                "noplaylist": True,
+                "socket_timeout": 20,
+            }
+
+            b = (cookies_browser or self._cookies_browser or "").strip().lower()
+            if b:
+                ydl_opts["cookiesfrombrowser"] = (b,)
+
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                data = ydl.extract_info(url, download=False)
+
+            if not data:
+                return {"ok": False, "error": "Preview failed"}
+
+            if isinstance(data, dict) and data.get("entries"):
+                data = next(iter(data["entries"]), data)
+
+            duration = data.get("duration") if isinstance(data, dict) else None
+            preview = {
+                "title": data.get("title") or "",
+                "uploader": data.get("uploader") or data.get("channel") or "",
+                "duration": duration if isinstance(duration, int) else None,
+                "duration_text": _fmt_duration(duration if isinstance(duration, int) else None),
+                "thumbnail": data.get("thumbnail") or "",
+                "webpage_url": data.get("webpage_url") or url,
+                "is_live": bool(data.get("is_live")),
+                "extractor": data.get("extractor") or "",
+                "took_ms": 0,
+            }
+            return {"ok": True, "preview": preview}
+
+        except Exception as e:
+            return {"ok": False, "error": repr(e)}
     
     def _ytdlp_base_args(self, cookies_browser: str | None = None) -> list[str]:
         b = (cookies_browser or self._cookies_browser or "").strip().lower()
@@ -230,3 +287,6 @@ def _extract_first_json(text: str) -> dict | None:
         return obj if isinstance(obj, dict) else None
     except Exception:
         return None
+
+def _use_inprocess_ytdlp() -> bool:
+    return bool(getattr(sys, "frozen", False))

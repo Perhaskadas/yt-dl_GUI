@@ -33,3 +33,4 @@ Be runnable as a self contained and easy to download .exe file
    - `powershell -ExecutionPolicy Bypass -File .\\build.ps1`
 
 The output exe will be in `dist\\yt-dlp-gui.exe` and uses `src\\assets\\yt-dlp-gui.ico` as the Windows icon.
+The build collects pywebview runtime files needed for Edge WebView2.

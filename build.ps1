@@ -12,6 +12,7 @@ pyinstaller `
   --onefile `
   --name "yt-dlp-gui" `
   --icon $icon `
+  --collect-all webview `
   --add-data "$ui;ui" `
   --add-data "$assets;assets" `
   src\\app\\main.py
