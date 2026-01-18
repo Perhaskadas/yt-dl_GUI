@@ -4,6 +4,8 @@ A lightweight desktop GUI for `yt-dlp`, built with Python and `pywebview`.
 
 This project wraps the `yt-dlp` CLI project in a easy to use GUI.
 
+Original `yt-dlp` git repo: https://github.com/yt-dlp/yt-dlp
+
 ---
 
 ## Features
