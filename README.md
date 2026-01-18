@@ -2,7 +2,7 @@
 
 A lightweight desktop GUI for `yt-dlp`, built with Python and `pywebview`.
 
-This project wraps the powerful `yt-dlp` CLI in a simple, responsive graphical interface while preserving full functionality and performance.
+This project wraps the `yt-dlp` CLI project in a easy to use GUI.
 
 ---
 
@@ -12,15 +12,75 @@ This project wraps the powerful `yt-dlp` CLI in a simple, responsive graphical i
 - Live log output streamed from `yt-dlp`
 - Start / Stop downloads safely
 - Native folder picker
-- Runs downloads in a background thread (UI never freezes)
+- Runs downloads in a background thread
 
 ---
 
-## Final Plan
-Be runnable as a self contained and easy to download .exe file
-
 ## System Dependencies
-- **FFmpeg** (currently required for most formats and audio/video merging, may be bundled into .exe file later)
+- **FFmpeg**
+- **Deno**
+Missing either of these dependencies will severely limit or prevent the proper running of the interface
+
+---
+
+## Getting Started
+
+### 1) Check dependencies
+
+Windows (PowerShell):
+```powershell
+ffmpeg -version
+deno --version
+```
+
+macOS (Terminal):
+```bash
+ffmpeg -version
+deno --version
+```
+
+If either command is not found, install it using the steps below.
+
+### 2) Install FFmpeg
+
+Windows (CLI via winget):
+```powershell
+winget install ffmpeg
+```
+
+Windows (manual):
+- Download a build from `https://www.ffmpeg.org/download.html`
+- Extract the zip and add the `bin` folder to your PATH (if you do not add to PATH, it may not be detected)
+
+macOS (CLI via Homebrew):
+```bash
+brew install ffmpeg
+```
+
+macOS (manual):
+- Download a build from `https://www.ffmpeg.org/download.html`
+- Move `ffmpeg` to `/usr/local/bin` (or another PATH directory)
+
+### 3) Install Deno
+
+Windows (CLI via winget):
+```powershell
+winget install Deno
+```
+
+Windows (manual):
+- Follow the instructions found at https://docs.deno.com/runtime/getting_started/installation/ 
+
+macOS (CLI via Homebrew):
+```bash
+brew install deno
+```
+
+macOS (manual):
+- Follow the instructions found at https://docs.deno.com/runtime/getting_started/installation/ 
+
+### 4) Run
+Run the downloaded executable file
 
 ---
 
