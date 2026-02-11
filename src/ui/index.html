@@ -1,10 +1,13 @@
-﻿<!doctype html>
+<!doctype html>
 <html data-theme="dark">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>yt-dlp GUI</title>
     <link rel="icon" href="../assets/yt-dlp-gui.ico">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/theme.css">
     <link rel="stylesheet" href="css/base.css">
     <link rel="stylesheet" href="css/layout.css">
@@ -53,7 +56,7 @@
             </div>
           </div>
 
-          <div class="row">
+          <div class="row-2col">
             <div class="grow">
               <label class="label inline">
                 Preset
@@ -90,31 +93,34 @@
                 <option value="mp3">Audio only (MP3)</option>
               </select>
             </div>
-          </div>
 
-          <div class="grow">
-            <label class="label inline">
-              Cookies
-              <span class="info-tip" tabindex="0" aria-label="Cookies info">
-                <span class="info-tip-content">
-                  Sometimes your login cookies are required to download a movie.<br>
-                  If downloads are not working select a browser where you are logged into the website.
+            <div class="grow">
+              <label class="label inline">
+                Cookies
+                <span class="info-tip" tabindex="0" aria-label="Cookies info">
+                  <span class="info-tip-content">
+                    Sometimes your login cookies are required to download a movie.<br>
+                    If downloads are not working select a browser where you are logged into the website.
+                  </span>
                 </span>
-              </span>
-            </label>
+              </label>
 
-            <select id="cookiesEl" class="input">
-              <option value="">None</option>
-              <option value="firefox">Firefox</option>
-              <option value="chrome">Chrome</option>
-              <option value="safari">Safari</option>
-            </select>
+              <select id="cookiesEl" class="input">
+                <option value="">None</option>
+                <option value="firefox">Firefox</option>
+                <option value="chrome">Chrome</option>
+                <option value="safari">Safari</option>
+              </select>
+            </div>
           </div>
 
-          <div class="progress">
-            <div class="progress-bar" style="width: 0%"></div>
+          <div class="progress-row">
+            <div class="progress">
+              <div class="progress-bar" style="width: 0%"></div>
+            </div>
+            <span id="progressPct" class="progress-pct">0%</span>
           </div>
-          <div class="muted" id="status">Idle</div>
+          <div class="muted" id="status">Ready</div>
         </section>
 
         <section class="card reveal delay-2">
@@ -122,17 +128,35 @@
             <div class="section-head compact">
               <h2>Preview</h2>
             </div>
-            <button id="toggleLogsBtn" class="btn ghost">Show logs</button>
+            <div class="tab-bar">
+              <button class="tab-btn active" data-tab="preview">Preview</button>
+              <button class="tab-btn" data-tab="logs">Logs</button>
+            </div>
           </div>
 
           <div class="panel-body">
-            <div id="previewPanel" class="preview">
+            <!-- Empty state -->
+            <div id="previewEmpty" class="preview-empty">
+              <div class="preview-empty-icon" aria-hidden="true"></div>
+              <div class="preview-empty-text">No video loaded</div>
+              <div class="preview-empty-hint">Paste a URL above to preview</div>
+            </div>
+
+            <!-- Skeleton loading state -->
+            <div id="previewSkeleton" class="preview-skeleton hidden">
+              <div class="skeleton-thumb"></div>
+              <div class="skeleton-line medium"></div>
+              <div class="skeleton-line short"></div>
+              <div class="skeleton-line xs"></div>
+            </div>
+
+            <!-- Content state -->
+            <div id="previewPanel" class="preview hidden">
               <img id="pvThumb" class="preview-thumb hidden" alt="Thumbnail" />
 
               <div class="preview-meta">
-                <div id="pvTitle" class="preview-title muted">Paste a URL to preview</div>
-                <div id="pvSub" class="preview-sub muted"></div>
-                <div id="pvNote" class="preview-note muted"></div>
+                <div id="pvTitle" class="preview-title"></div>
+                <div id="pvBadges" class="preview-badges"></div>
               </div>
 
               <div class="preview-actions">
@@ -148,9 +172,9 @@
       </main>
     </div>
 
-    <div id="doneModal" class="modal hidden">
+    <div id="doneModal" class="modal hidden" role="dialog" aria-modal="true">
       <div class="modal-content card">
-        <h2 id="doneTitle">Download finished</h2>
+        <h2 id="doneTitle" class="modal-heading">Download finished</h2>
         <p id="doneText"></p>
 
         <div class="modal-actions">

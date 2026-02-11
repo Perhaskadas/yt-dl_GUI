@@ -1,4 +1,4 @@
-﻿.modal.hidden { display: none; }
+.modal.hidden { display: none; }
 
 .modal {
   position: fixed;
@@ -9,13 +9,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 18px;
+  padding: var(--space-5);
   z-index: 9999;
 }
 
 .modal-content {
   width: min(560px, 96vw);
-  animation: modalIn 400ms ease-out;
+  animation: modalIn 300ms cubic-bezier(0.22, 0.61, 0.36, 1);
   position: relative;
   overflow: hidden;
   border-color: var(--modal-border);
@@ -40,16 +40,37 @@
   --modal-tint: var(--error-tint);
 }
 
+.modal-content .modal-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.modal-content .modal-heading::before {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.modal-content.success .modal-heading::before {
+  content: "\2713";
+  color: var(--md-sys-color-secondary);
+}
+
+.modal-content.error .modal-heading::before {
+  content: "\2717";
+  color: var(--md-sys-color-error);
+}
+
 .modal-actions {
   display: flex;
   gap: 10px;
   justify-content: flex-end;
-  margin-top: 14px;
+  margin-top: var(--space-4);
 }
 
 @keyframes modalIn {
   from {
-    transform: translateY(6px) scale(0.98);
+    transform: translateY(8px) scale(0.97);
     opacity: 0;
   }
   to {
@@ -63,13 +84,13 @@
 .toast {
   position: fixed;
   left: 50%;
-  bottom: 18px;
+  bottom: var(--space-5);
   transform: translateX(-50%) translateY(18px);
   opacity: 0;
   pointer-events: none;
   z-index: 10000;
-  width: min(720px, 60vw);
-  padding: 12px 14px;
+  width: min(480px, calc(100vw - var(--space-8)));
+  padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-md);
   border: 1px solid var(--toast-border);
   background: var(--toast-bg);
@@ -86,6 +107,27 @@
   opacity: 1;
   transform: translateX(-50%) translateY(0);
   pointer-events: auto;
+}
+
+.toast-title {
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: var(--space-2);
+  color: inherit;
+}
+
+.toast-list {
+  margin: 0;
+  padding-left: var(--space-5);
+  list-style: disc;
+}
+
+.toast-list li {
+  margin-bottom: 2px;
+}
+
+.toast-list li:last-child {
+  margin-bottom: 0;
 }
 
 .label.inline {
@@ -128,7 +170,7 @@
   width: min(320px, 90vw);
   max-height: min(280px, 50vh);
   overflow: auto;
-  padding: 12px 14px;
+  padding: var(--space-3) 14px;
   border-radius: var(--radius-md);
   background: var(--tooltip-bg);
   color: var(--tooltip-text);

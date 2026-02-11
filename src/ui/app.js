@@ -6,6 +6,8 @@ const downloadBtn = document.getElementById("btnDownload");
 const stopBtn = document.getElementById("btnStop");
 const browseBtn = document.getElementById("btnBrowse");
 const progressBar = document.querySelector(".progress-bar");
+const progressTrack = document.querySelector(".progress");
+const progressPctEl = document.getElementById("progressPct");
 const doneModal = document.getElementById("doneModal");
 const doneTitle = document.getElementById("doneTitle");
 const doneText = document.getElementById("doneText");
@@ -14,6 +16,14 @@ const btnNextDownload = document.getElementById("btnNextDownload");
 const presetEl = document.getElementById("presetEl");
 const cookiesEl = document.getElementById("cookiesEl");
 
+// Preview panels (3-state)
+const previewEmpty = document.getElementById("previewEmpty");
+const previewSkeleton = document.getElementById("previewSkeleton");
+const previewPanel = document.getElementById("previewPanel");
+const logPanel = document.getElementById("logPanel");
+
+// Tab bar
+const tabBtns = document.querySelectorAll(".tab-bar .tab-btn");
 
 let lastOutDir = "";
 
@@ -142,10 +152,52 @@ function log(line) {
   logEl.scrollTop = logEl.scrollHeight;
 }
 
+// Tab switching
+let currentTab = "preview";
+
+function switchTab(tab) {
+  currentTab = tab;
+  tabBtns.forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.tab === tab);
+  });
+
+  if (tab === "preview") {
+    logPanel.classList.add("hidden");
+    // Show the appropriate preview state
+    showCurrentPreviewState();
+  } else {
+    // Hide all preview states, show logs
+    previewEmpty.classList.add("hidden");
+    previewSkeleton.classList.add("hidden");
+    previewPanel.classList.add("hidden");
+    logPanel.classList.remove("hidden");
+  }
+}
+
+// Track which preview state is active
+let previewState = "empty"; // "empty" | "loading" | "content"
+
+function showCurrentPreviewState() {
+  previewEmpty.classList.toggle("hidden", previewState !== "empty");
+  previewSkeleton.classList.toggle("hidden", previewState !== "loading");
+  previewPanel.classList.toggle("hidden", previewState !== "content");
+}
+
 function setRunning(running) {
   downloadBtn.disabled = running;
   browseBtn.disabled = running;
   stopBtn.disabled = !running;
+
+  // Disable inputs while downloading
+  urlEl.disabled = running;
+  presetEl.disabled = running;
+  cookiesEl.disabled = running;
+
+  // Spinner on download button
+  downloadBtn.classList.toggle("downloading", running);
+
+  // Progress bar glow
+  progressTrack.classList.toggle("active", running);
 }
 
 window.ui = {
@@ -153,12 +205,14 @@ window.ui = {
   onProgress: (pct) => {
     const clamped = Math.max(0, Math.min(100, pct));
     progressBar.style.width = clamped + "%";
-    statusEl.textContent = `Running… ${clamped.toFixed(1)}%`;
+    progressPctEl.textContent = clamped.toFixed(1) + "%";
+    statusEl.textContent = `Downloading\u2026 ${clamped.toFixed(1)}%`;
   },
   onJobEnd: (code, outDir) => {
     setRunning(false);
     const success = (code === 0);
-    statusEl.textContent = success ? "Done" : `Failed/Stopped (code ${code})`;
+    statusEl.textContent = success ? "Complete" : `Failed (code ${code})`;
+    progressPctEl.textContent = success ? "100%" : progressPctEl.textContent;
     showDoneModal(success, outDir);
   },
 };
@@ -193,11 +247,15 @@ downloadBtn.addEventListener("click", async () => {
   // Clear logs
   logEl.textContent = "";
 
+  // Auto-switch to logs tab
+  switchTab("logs");
+
   // Run
   try {
     setRunning(true);
     progressBar.style.width = "0%";
-    statusEl.textContent = "Starting…";
+    progressPctEl.textContent = "0%";
+    statusEl.textContent = "Starting download\u2026";
 
     const res = await pywebview.api.start_download(url, outDir, preset, cookies);
     log(`[python] ${JSON.stringify(res)}`);
@@ -235,6 +293,7 @@ btnOpenFolder.addEventListener("click", async () => {
 btnNextDownload.addEventListener("click", () => {
   hideDoneModal();
   progressBar.style.width = "0%";
+  progressPctEl.textContent = "0%";
   statusEl.textContent = "Ready";
 });
 
@@ -282,6 +341,10 @@ function showToastHtml(html, ms = 2200) {
   toastTimer = setTimeout(hideToast, ms);
 }
 
+function showToast(message, ms = 2200) {
+  showToastHtml(`<div>${message}</div>`, ms);
+}
+
 function showToastList(items, ms = 2200) {
   if (!items || items.length === 0) return;
 
@@ -303,60 +366,51 @@ function isLikelyUrl(s) {
   }
 }
 
-const toggleLogsBtn = document.getElementById("toggleLogsBtn");
-const previewPanel = document.getElementById("previewPanel");
-const logPanel = document.getElementById("logPanel");
-
-toggleLogsBtn.addEventListener("click", () => {
-  const showingLogs = !logPanel.classList.contains("hidden");
-  if (showingLogs) {
-    logPanel.classList.add("hidden");
-    previewPanel.classList.remove("hidden");
-    toggleLogsBtn.textContent = "Show logs";
-  } else {
-    previewPanel.classList.add("hidden");
-    logPanel.classList.remove("hidden");
-    toggleLogsBtn.textContent = "Hide logs";
-  }
+// Tab bar click handling
+tabBtns.forEach((btn) => {
+  btn.addEventListener("click", () => switchTab(btn.dataset.tab));
 });
 
 const pvThumb = document.getElementById("pvThumb");
 const pvTitle = document.getElementById("pvTitle");
-const pvSub = document.getElementById("pvSub");
-const pvNote = document.getElementById("pvNote");
+const pvBadges = document.getElementById("pvBadges");
 const pvRefreshBtn = document.getElementById("pvRefreshBtn");
 
 function previewSetIdle() {
-  pvTitle.textContent = "Paste a URL to preview";
-  pvSub.textContent = "";
-  pvNote.textContent = "";
-  pvThumb.classList.add("hidden");
-  pvThumb.removeAttribute("src");
+  previewState = "empty";
   pvRefreshBtn.disabled = true;
+  if (currentTab === "preview") showCurrentPreviewState();
 }
 
 function previewSetLoading() {
-  pvTitle.textContent = "Loading preview…";
-  pvSub.textContent = "";
-  pvNote.textContent = "";
-  pvThumb.classList.add("hidden");
-  pvThumb.removeAttribute("src");
+  previewState = "loading";
   pvRefreshBtn.disabled = true;
+  if (currentTab === "preview") showCurrentPreviewState();
 }
 
 function previewSetError(msg) {
+  previewState = "content";
   pvTitle.textContent = "Preview failed";
-  pvSub.textContent = msg || "Unknown error";
-  pvNote.textContent = "";
+  pvBadges.innerHTML = "";
+  if (msg) {
+    pvBadges.innerHTML = `<span class="preview-badge">${msg}</span>`;
+  }
   pvThumb.classList.add("hidden");
   pvThumb.removeAttribute("src");
   pvRefreshBtn.disabled = false;
+  if (currentTab === "preview") showCurrentPreviewState();
 }
 
 function previewSetData(pv) {
+  previewState = "content";
   pvTitle.textContent = pv.title || "(no title)";
-  pvSub.textContent = pv.uploader ? `By ${pv.uploader}` : "";
-  pvNote.textContent = pv.duration_text ? `Length: ${pv.duration_text}` : "";
+
+  // Build badges
+  const badges = [];
+  if (pv.uploader) badges.push(pv.uploader);
+  if (pv.duration_text) badges.push(pv.duration_text);
+  pvBadges.innerHTML = badges.map((b) => `<span class="preview-badge">${b}</span>`).join("");
+
   if (pv.thumbnail) {
     pvThumb.src = pv.thumbnail;
     pvThumb.classList.remove("hidden");
@@ -365,6 +419,7 @@ function previewSetData(pv) {
     pvThumb.removeAttribute("src");
   }
   pvRefreshBtn.disabled = false;
+  if (currentTab === "preview") showCurrentPreviewState();
 }
 
 let previewTimer = null;
@@ -391,6 +446,9 @@ async function runPreview(url) {
   }
 
   previewSetLoading();
+
+  // Auto-switch to preview tab when typing a URL
+  if (currentTab !== "preview") switchTab("preview");
 
   const myId = ++previewReqId;
 
