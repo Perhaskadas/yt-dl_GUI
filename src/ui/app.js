@@ -5,8 +5,9 @@ const outEl = document.getElementById("outDir");
 const downloadBtn = document.getElementById("btnDownload");
 const stopBtn = document.getElementById("btnStop");
 const browseBtn = document.getElementById("btnBrowse");
-const progressBar = document.querySelector(".progress-bar");
+const progressIndicator = document.querySelector(".progress-indicator");
 const progressTrack = document.querySelector(".progress");
+const progressRow = document.querySelector(".progress-row");
 const progressPctEl = document.getElementById("progressPct");
 const doneModal = document.getElementById("doneModal");
 const doneTitle = document.getElementById("doneTitle");
@@ -196,21 +197,37 @@ function setRunning(running) {
   // Spinner on download button
   downloadBtn.classList.toggle("downloading", running);
 
-  // Progress bar glow
-  progressTrack.classList.toggle("active", running);
+  if (running) {
+    // Show progress row in indeterminate mode
+    progressRow.classList.add("visible");
+    progressTrack.classList.add("indeterminate");
+    progressTrack.classList.remove("active");
+    progressIndicator.style.width = "0%";
+  } else {
+    progressTrack.classList.remove("indeterminate");
+  }
 }
 
 window.ui = {
   onLog: (line) => log(line),
   onProgress: (pct) => {
     const clamped = Math.max(0, Math.min(100, pct));
-    progressBar.style.width = clamped + "%";
+    // Transition from indeterminate → determinate on first tick
+    if (progressTrack.classList.contains("indeterminate")) {
+      progressTrack.classList.remove("indeterminate");
+      progressTrack.classList.add("active");
+    }
+    progressIndicator.style.width = clamped + "%";
     progressPctEl.textContent = clamped.toFixed(1) + "%";
     statusEl.textContent = `Downloading\u2026 ${clamped.toFixed(1)}%`;
   },
   onJobEnd: (code, outDir) => {
     setRunning(false);
     const success = (code === 0);
+    progressTrack.classList.remove("active", "indeterminate");
+    if (success) {
+      progressIndicator.style.width = "100%";
+    }
     statusEl.textContent = success ? "Complete" : `Failed (code ${code})`;
     progressPctEl.textContent = success ? "100%" : progressPctEl.textContent;
     showDoneModal(success, outDir);
@@ -253,7 +270,7 @@ downloadBtn.addEventListener("click", async () => {
   // Run
   try {
     setRunning(true);
-    progressBar.style.width = "0%";
+    progressIndicator.style.width = "0%";
     progressPctEl.textContent = "0%";
     statusEl.textContent = "Starting download\u2026";
 
@@ -292,7 +309,9 @@ btnOpenFolder.addEventListener("click", async () => {
 
 btnNextDownload.addEventListener("click", () => {
   hideDoneModal();
-  progressBar.style.width = "0%";
+  progressRow.classList.remove("visible");
+  progressTrack.classList.remove("active", "indeterminate");
+  progressIndicator.style.width = "0%";
   progressPctEl.textContent = "0%";
   statusEl.textContent = "Ready";
 });

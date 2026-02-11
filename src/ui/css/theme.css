@@ -67,7 +67,7 @@
   --btn-tonal: #303134;
 
   --progress-track: #2b2f34;
-  --progress-fill: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='10' viewBox='0 0 120 10'%3E%3Cpath d='M0 5 C10 1 20 9 30 5 S50 1 60 5 80 9 90 5 110 1 120 5' fill='none' stroke='%238ab4f8' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+  --progress-indicator: var(--md-sys-color-primary);
   --progress-glow: rgba(138,180,248,0.35);
 
   --shimmer-base: #2a2b2f;
@@ -147,7 +147,7 @@ html[data-theme="light"] {
   --btn-tonal: #e8eaed;
 
   --progress-track: #e0e3e7;
-  --progress-fill: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='10' viewBox='0 0 120 10'%3E%3Cpath d='M0 5 C10 1 20 9 30 5 S50 1 60 5 80 9 90 5 110 1 120 5' fill='none' stroke='%231a73e8' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+  --progress-indicator: var(--md-sys-color-primary);
   --progress-glow: rgba(26,115,232,0.3);
 
   --shimmer-base: #e0e3e7;
