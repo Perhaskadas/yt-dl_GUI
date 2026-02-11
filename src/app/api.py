@@ -8,7 +8,6 @@ import subprocess
 import sys
 import threading
 import time
-from urllib.parse import urlparse
 import webview
 from app.runner import Runner
 
@@ -26,13 +25,8 @@ class Api:
     def attach_window(self, window):
         self._window = window
 
-    def choose_folder(self):
-        assert self._window is not None
-        folders = self._window.create_file_dialog(webview.FileDialog.FOLDER)
-        return folders[0] if folders else None
+    # ---------- UI communication ----------
 
-
-    # ---------- helpers to safely talk to UI ----------
     def _ui_log(self, line: str):
         if not self._window:
             return
@@ -48,7 +42,7 @@ class Api:
 
         if pct >= 99.9 and self._progress_max < 95.0:
             return
-    
+
         if pct < self._progress_max:
             pct = self._progress_max
         else:
@@ -60,29 +54,33 @@ class Api:
     def _ui_done(self, code: int):
         if not self._window:
             return
-        
         out_dir_json = json.dumps(self._last_out_dir)
         with self._ui_lock:
             self._window.evaluate_js(f"ui.onJobEnd({code}, {out_dir_json})")
 
     # ---------- JS-callable methods ----------
+
+    def choose_folder(self):
+        assert self._window is not None
+        folders = self._window.create_file_dialog(webview.FileDialog.FOLDER)
+        return folders[0] if folders else None
+
     def start_download(self, url: str, out_dir: str, preset: str = "best", cookies_browser: str = ""):
         url = (url or "").strip()
         out_dir = (out_dir or "").strip()
 
         if not url:
             return {"ok": False, "error": "Missing URL"}
-        
+
         if not out_dir:
-            return {"ok":False, "error": "Select an output folder."}
+            return {"ok": False, "error": "Select an output folder."}
 
         if self.active_job_id is not None:
             return {"ok": False, "error": "A job is already running"}
-        
+
         if cookies_browser:
             self._cookies_browser = cookies_browser.lower()
-        
-        # Start runner
+
         self._last_out_dir = out_dir
         self._progress_max = 0.0
 
@@ -90,7 +88,7 @@ class Api:
             url=url,
             out_dir=out_dir,
             preset=preset,
-            cookies_browser=(cookies_browser or self._cookies_browser),
+            cookies_browser=self._resolve_cookies(cookies_browser),
             on_log=self._ui_log,
             on_progress=self._ui_progress,
             on_done=self._on_done,
@@ -102,22 +100,26 @@ class Api:
     def stop(self):
         if not self.active_job_id:
             return {"ok": False, "error": "No active job"}
-
         ok = self.runner.stop(self.active_job_id)
         return {"ok": ok}
 
-    def _on_done(self, code: int):
-        # Called from runner thread
-        self._progress_max = 0.0
-        self._ui_log(f"[api] job finished with code {code}")
-        self.active_job_id = None
-        self._ui_done(code)
+    def probe(self, url: str, cookies_browser: str = ""):
+        url = (url or "").strip()
+        if not url:
+            return {"ok": False, "error": "Missing URL"}
+
+        if _use_inprocess_ytdlp():
+            return self._probe_inprocess(url, cookies_browser)
+        return self._probe_subprocess(url, cookies_browser)
+
+    def set_cookies_browser(self, browser: str):
+        self._cookies_browser = (browser or "").strip().lower()
+        return {"ok": True}
 
     def open_folder(self, path: str):
         path = (path or "").strip()
         if not path:
             return {"ok": False, "error": "No folder path provided"}
-
         if not os.path.isdir(path):
             return {"ok": False, "error": f"Folder does not exist: {path}"}
 
@@ -131,31 +133,37 @@ class Api:
             return {"ok": True}
         except Exception as e:
             return {"ok": False, "error": repr(e)}
-        
-    def probe(self, url: str, cookies_browser: str = ""):
-        url = (url or "").strip()
-        if not url:
-            return {"ok": False, "error": "Missing URL"}
 
-        if _use_inprocess_ytdlp():
-            return self._probe_inprocess(url, cookies_browser)
+    def system_status(self):
+        return {
+            "ok": True,
+            "ffmpeg": shutil.which("ffmpeg") is not None,
+            "deno": shutil.which("deno") is not None,
+        }
 
+    # ---------- Private helpers ----------
+
+    def _on_done(self, code: int):
+        self._progress_max = 0.0
+        self._ui_log(f"[api] job finished with code {code}")
+        self.active_job_id = None
+        self._ui_done(code)
+
+    def _resolve_cookies(self, cookies_browser: str = "") -> str:
+        return (cookies_browser or self._cookies_browser or "").strip().lower()
+
+    def _probe_subprocess(self, url: str, cookies_browser: str = ""):
         creationflags = 0
         if sys.platform.startswith("win"):
             creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
         args = [sys.executable, "-m", "yt_dlp"]
 
-        b = (cookies_browser or self._cookies_browser or "").strip().lower()
+        b = self._resolve_cookies(cookies_browser)
         if b:
             args += ["--cookies-from-browser", b]
 
-        args += [
-            "--dump-single-json",
-            "--no-playlist",
-            "--skip-download",
-            url,
-        ]
+        args += ["--dump-single-json", "--no-playlist", "--skip-download", url]
 
         try:
             t0 = time.time()
@@ -173,7 +181,6 @@ class Api:
             out = (proc.stdout or "").strip()
 
             if proc.returncode != 0:
-                # show last line as a short error, but also hint cookies
                 last = out.splitlines()[-1] if out else "yt-dlp failed"
                 low = out.lower()
                 if "cookies" in low or "sign in" in low or "login" in low:
@@ -182,38 +189,15 @@ class Api:
 
             data = _extract_first_json(out)
             if data is None:
-                msg = "Could not parse preview data. Try switching Cookies, then Refresh."
-                return {"ok": False, "error": msg}
+                return {"ok": False, "error": "Could not parse preview data. Try switching Cookies, then Refresh."}
 
-            duration = data.get("duration")
-            preview = {
-                "title": data.get("title") or "",
-                "uploader": data.get("uploader") or data.get("channel") or "",
-                "duration": duration if isinstance(duration, int) else None,
-                "duration_text": _fmt_duration(duration if isinstance(duration, int) else None),
-                "thumbnail": data.get("thumbnail") or "",
-                "webpage_url": data.get("webpage_url") or url,
-                "is_live": bool(data.get("is_live")),
-                "extractor": data.get("extractor") or "",
-                "took_ms": int((time.time() - t0) * 1000),
-            }
-            return {"ok": True, "preview": preview}
+            took_ms = int((time.time() - t0) * 1000)
+            return {"ok": True, "preview": _build_preview(data, url, took_ms)}
 
         except subprocess.TimeoutExpired:
             return {"ok": False, "error": "Preview timed out"}
         except Exception as e:
             return {"ok": False, "error": repr(e)}
-        
-    def set_cookies_browser(self, browser: str):
-        self._cookies_browser = (browser or "").strip().lower()
-        return {"ok": True}
-
-    def system_status(self):
-        return {
-            "ok": True,
-            "ffmpeg": shutil.which("ffmpeg") is not None,
-            "deno": shutil.which("deno") is not None,
-        }
 
     def _probe_inprocess(self, url: str, cookies_browser: str = ""):
         try:
@@ -226,7 +210,7 @@ class Api:
                 "socket_timeout": 20,
             }
 
-            b = (cookies_browser or self._cookies_browser or "").strip().lower()
+            b = self._resolve_cookies(cookies_browser)
             if b:
                 ydl_opts["cookiesfrombrowser"] = (b,)
 
@@ -239,31 +223,29 @@ class Api:
             if isinstance(data, dict) and data.get("entries"):
                 data = next(iter(data["entries"]), data)
 
-            duration = data.get("duration") if isinstance(data, dict) else None
-            preview = {
-                "title": data.get("title") or "",
-                "uploader": data.get("uploader") or data.get("channel") or "",
-                "duration": duration if isinstance(duration, int) else None,
-                "duration_text": _fmt_duration(duration if isinstance(duration, int) else None),
-                "thumbnail": data.get("thumbnail") or "",
-                "webpage_url": data.get("webpage_url") or url,
-                "is_live": bool(data.get("is_live")),
-                "extractor": data.get("extractor") or "",
-                "took_ms": 0,
-            }
-            return {"ok": True, "preview": preview}
+            return {"ok": True, "preview": _build_preview(data, url)}
 
         except Exception as e:
             return {"ok": False, "error": repr(e)}
-    
-    def _ytdlp_base_args(self, cookies_browser: str | None = None) -> list[str]:
-        b = (cookies_browser or self._cookies_browser or "").strip().lower()
-        args = [sys.executable, "-m", "yt_dlp"]  # IMPORTANT: yt_dlp module name
-        if b:
-            args += ["--cookies-from-browser", b]
-        return args
 
 
+# ---------- Module-level helpers ----------
+
+def _build_preview(data: dict, fallback_url: str, took_ms: int = 0) -> dict:
+    duration = data.get("duration")
+    if not isinstance(duration, int):
+        duration = None
+    return {
+        "title": data.get("title") or "",
+        "uploader": data.get("uploader") or data.get("channel") or "",
+        "duration": duration,
+        "duration_text": _fmt_duration(duration),
+        "thumbnail": data.get("thumbnail") or "",
+        "webpage_url": data.get("webpage_url") or fallback_url,
+        "is_live": bool(data.get("is_live")),
+        "extractor": data.get("extractor") or "",
+        "took_ms": took_ms,
+    }
 
 
 def _fmt_duration(seconds: int | None) -> str:
@@ -274,19 +256,19 @@ def _fmt_duration(seconds: int | None) -> str:
     s = seconds % 60
     return f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
 
+
 def _extract_first_json(text: str) -> dict | None:
     if not text:
         return None
-
     i = text.find("{")
     if i == -1:
         return None
-
     try:
         obj, _ = json.JSONDecoder().raw_decode(text[i:])
         return obj if isinstance(obj, dict) else None
     except Exception:
         return None
+
 
 def _use_inprocess_ytdlp() -> bool:
     return bool(getattr(sys, "frozen", False))
