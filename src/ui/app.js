@@ -24,6 +24,13 @@ const setupIndicator = document.getElementById("setupIndicator");
 const setupPct = document.getElementById("setupPct");
 const setupProgress = setupOverlay ? setupOverlay.querySelector(".progress") : null;
 
+// Update modal
+const updateModal = document.getElementById("updateModal");
+const updateVersion = document.getElementById("updateVersion");
+const updateChangelog = document.getElementById("updateChangelog");
+const btnUpdateDownload = document.getElementById("btnUpdateDownload");
+const btnUpdateDismiss = document.getElementById("btnUpdateDismiss");
+
 // Preview panels (3-state)
 const previewEmpty = document.getElementById("previewEmpty");
 const previewSkeleton = document.getElementById("previewSkeleton");
@@ -243,6 +250,30 @@ window.ui = {
     if (status && !status.deno) missing.push("Deno failed to install");
     if (missing.length) showToastList(missing, 4200);
   },
+  onUpdateAvailable: (info) => {
+    if (info.app) {
+      updateVersion.textContent = `${info.app.name} is available`;
+      updateChangelog.textContent = info.app.body || "";
+      btnUpdateDownload.href = info.app.html_url || "#";
+      updateModal.classList.remove("hidden");
+    }
+    if (info.pip) {
+      const updates = Object.entries(info.pip)
+        .filter(([, v]) => v)
+        .map(([k, v]) => `${k.replace("_", "-")} → ${v}`);
+      if (updates.length) {
+        showToastHtml(
+          `<div class="toast-title">yt-dlp update available</div>` +
+          `<div>${updates.join(", ")}</div>` +
+          `<button class="btn" style="margin-top:8px" onclick="pipUpdate()">Update</button>`,
+          8000,
+        );
+      }
+    }
+  },
+  onPipUpdateComplete: (ok) => {
+    showToast(ok ? "pip update complete — restart to use new version" : "pip update failed — check logs", 4000);
+  },
   onLog: (line) => log(line),
   onProgress: (pct) => {
     const clamped = Math.max(0, Math.min(100, pct));
@@ -354,8 +385,25 @@ doneModal.addEventListener("click", (e) => {
   if (e.target === doneModal) hideDoneModal();
 });
 
+btnUpdateDismiss.addEventListener("click", () => {
+  updateModal.classList.add("hidden");
+});
+updateModal.addEventListener("click", (e) => {
+  if (e.target === updateModal) updateModal.classList.add("hidden");
+});
+
+async function pipUpdate() {
+  hideToast();
+  showToast("Updating yt-dlp…", 3000);
+  try { await pywebview.api.update_pip_deps(); } catch (e) { log(`[error] ${e}`); }
+}
+window.pipUpdate = pipUpdate;
+
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") hideDoneModal();
+  if (e.key === "Escape") {
+    hideDoneModal();
+    if (updateModal) updateModal.classList.add("hidden");
+  }
 });
 
 const toastEl = document.getElementById("toast");
@@ -604,6 +652,7 @@ loadOptions();
 window.addEventListener("pywebviewready", () => {
   syncOptionsToPython();
   checkDependencies();
+  pywebview.api.check_for_updates();
 });
 
 

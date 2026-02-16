@@ -9,7 +9,8 @@ import sys
 import threading
 import time
 import webview
-from app import deps
+import app
+from app import deps, updater
 from app.runner import Runner
 
 
@@ -169,6 +170,41 @@ class Api:
             args=(_on_status, _on_progress, _on_complete),
             daemon=True,
         )
+        t.start()
+        return {"ok": True}
+
+    def check_for_updates(self):
+        def _run():
+            result = {"app": None, "pip": None}
+            try:
+                result["app"] = updater.check_for_app_update(app.__version__)
+            except Exception:
+                pass
+            if not getattr(sys, "frozen", False):
+                try:
+                    result["pip"] = updater.check_pip_updates()
+                except Exception:
+                    pass
+            if not self._window:
+                return
+            if result["app"] or (result["pip"] and any(result["pip"].values())):
+                payload = json.dumps(result)
+                with self._ui_lock:
+                    self._window.evaluate_js(f"ui.onUpdateAvailable({payload})")
+
+        t = threading.Thread(target=_run, daemon=True)
+        t.start()
+        return {"ok": True}
+
+    def update_pip_deps(self):
+        def _run():
+            ok = updater.run_pip_update(on_log=self._ui_log)
+            if not self._window:
+                return
+            with self._ui_lock:
+                self._window.evaluate_js(f"ui.onPipUpdateComplete({json.dumps(ok)})")
+
+        t = threading.Thread(target=_run, daemon=True)
         t.start()
         return {"ok": True}
 

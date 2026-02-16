@@ -79,6 +79,15 @@
   }
 }
 
+.update-changelog {
+  max-height: 200px;
+  overflow-y: auto;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  margin: var(--space-3) 0;
+}
+
 .toast.hidden { display: none; }
 
 .toast {
