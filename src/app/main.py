@@ -1,10 +1,16 @@
 from pathlib import Path
 import inspect
+import os
 import sys
 import webview
 from app.api import Api
+from app.deps import get_bin_dir
 
 def main():
+    bin_dir = get_bin_dir()
+    bin_dir.mkdir(parents=True, exist_ok=True)
+    os.environ["PATH"] = str(bin_dir) + os.pathsep + os.environ.get("PATH", "")
+
     if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
         base_dir = Path(sys._MEIPASS)
     else:

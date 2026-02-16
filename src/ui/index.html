@@ -64,7 +64,11 @@
                   <span class="info-tip-content">
                     <strong>Best (video+audio)</strong><br>
                     Highest quality video and audio.<br>
-                    Best for normal watching.<br><br>
+                    May produce .webm or .mkv files.<br><br>
+
+                    <strong>Best (MP4)</strong><br>
+                    Highest quality, always .mp4 output.<br>
+                    Best compatibility with most players.<br><br>
 
                     <strong>Best up to 1080p</strong><br>
                     Limits video to 1080p to save space.<br>
@@ -87,6 +91,7 @@
 
               <select id="presetEl" class="input">
                 <option value="best">Best (video+audio)</option>
+                <option value="mp4">Best (MP4)</option>
                 <option value="1080p">Best up to 1080p (video+audio)</option>
                 <option value="videoOnly">Best (video only)</option>
                 <option value="audio">Audio only (best)</option>
@@ -180,6 +185,19 @@
         <div class="modal-actions">
           <button id="btnOpenFolder" class="btn primary">Open output folder</button>
           <button id="btnNextDownload" class="btn">Download next</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="setupOverlay" class="modal hidden">
+      <div class="modal-content card">
+        <h2 class="modal-heading">Setting up</h2>
+        <p id="setupText">Checking dependencies...</p>
+        <div class="progress-row visible">
+          <div class="progress indeterminate">
+            <div id="setupIndicator" class="progress-indicator"></div>
+          </div>
+          <span id="setupPct" class="progress-pct"></span>
         </div>
       </div>
     </div>

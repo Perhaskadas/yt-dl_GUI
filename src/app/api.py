@@ -9,6 +9,7 @@ import sys
 import threading
 import time
 import webview
+from app import deps
 from app.runner import Runner
 
 
@@ -140,6 +141,36 @@ class Api:
             "ffmpeg": shutil.which("ffmpeg") is not None,
             "deno": shutil.which("deno") is not None,
         }
+
+    def install_deps(self):
+        def _on_status(text):
+            if not self._window:
+                return
+            payload = json.dumps(text)
+            with self._ui_lock:
+                self._window.evaluate_js(f"ui.onDepStatus({payload})")
+
+        def _on_progress(dep, pct):
+            if not self._window:
+                return
+            payload = json.dumps({"dep": dep, "pct": pct})
+            with self._ui_lock:
+                self._window.evaluate_js(f"ui.onDepProgress({payload})")
+
+        def _on_complete(status):
+            if not self._window:
+                return
+            payload = json.dumps(status)
+            with self._ui_lock:
+                self._window.evaluate_js(f"ui.onDepComplete({payload})")
+
+        t = threading.Thread(
+            target=deps.ensure_deps,
+            args=(_on_status, _on_progress, _on_complete),
+            daemon=True,
+        )
+        t.start()
+        return {"ok": True}
 
     # ---------- Private helpers ----------
 

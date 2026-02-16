@@ -120,6 +120,8 @@ class Runner:
                 # Presets -> yt-dlp flags
                 if preset == "best":
                     args += ["-f", "bv*+ba/best"]
+                elif preset == "mp4":
+                    args += ["-f", "bv*+ba/best", "--merge-output-format", "mp4"]
                 elif preset == "1080p":
                     args += ["-f", "bv*[height<=1080]+ba/best[height<=1080]"]
                 elif preset in ("videoonly", "video_only", "video"):
@@ -213,7 +215,9 @@ class Runner:
             cookies_browser = (cookies_browser or "").strip().lower()
 
             fmt = "bv*+ba/best"
-            if preset == "1080p":
+            if preset == "mp4":
+                fmt = "bv*+ba/best"
+            elif preset == "1080p":
                 fmt = "bv*[height<=1080]+ba/best[height<=1080]"
             elif preset in ("videoonly", "video_only", "video"):
                 fmt = "bv*"
@@ -245,6 +249,9 @@ class Runner:
 
             if cookies_browser:
                 ydl_opts["cookiesfrombrowser"] = (cookies_browser,)
+
+            if preset == "mp4":
+                ydl_opts["merge_output_format"] = "mp4"
 
             if preset == "mp3":
                 ydl_opts["postprocessors"] = [

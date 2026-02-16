@@ -17,6 +17,13 @@ const btnNextDownload = document.getElementById("btnNextDownload");
 const presetEl = document.getElementById("presetEl");
 const cookiesEl = document.getElementById("cookiesEl");
 
+// Setup overlay
+const setupOverlay = document.getElementById("setupOverlay");
+const setupText = document.getElementById("setupText");
+const setupIndicator = document.getElementById("setupIndicator");
+const setupPct = document.getElementById("setupPct");
+const setupProgress = setupOverlay ? setupOverlay.querySelector(".progress") : null;
+
 // Preview panels (3-state)
 const previewEmpty = document.getElementById("previewEmpty");
 const previewSkeleton = document.getElementById("previewSkeleton");
@@ -209,6 +216,33 @@ function setRunning(running) {
 }
 
 window.ui = {
+  onDepStatus: (text) => {
+    const labels = {
+      downloading_ffmpeg: "Downloading FFmpeg\u2026",
+      downloading_deno: "Downloading Deno\u2026",
+    };
+    if (setupText) setupText.textContent = labels[text] || text;
+    // Reset to indeterminate when starting a new dep
+    if (setupProgress) setupProgress.classList.add("indeterminate");
+    if (setupIndicator) setupIndicator.style.width = "0%";
+    if (setupPct) setupPct.textContent = "";
+  },
+  onDepProgress: (info) => {
+    if (!info) return;
+    const pct = info.pct;
+    if (pct >= 0 && setupProgress) {
+      setupProgress.classList.remove("indeterminate");
+      setupIndicator.style.width = Math.min(100, pct).toFixed(1) + "%";
+      setupPct.textContent = Math.min(100, pct).toFixed(0) + "%";
+    }
+  },
+  onDepComplete: (status) => {
+    if (setupOverlay) setupOverlay.classList.add("hidden");
+    const missing = [];
+    if (status && !status.ffmpeg) missing.push("FFmpeg failed to install");
+    if (status && !status.deno) missing.push("Deno failed to install");
+    if (missing.length) showToastList(missing, 4200);
+  },
   onLog: (line) => log(line),
   onProgress: (pct) => {
     const clamped = Math.max(0, Math.min(100, pct));
@@ -545,12 +579,15 @@ async function checkDependencies() {
   try {
     const res = await pywebview.api.system_status();
     if (!res || !res.ok) return;
-    const missing = [];
-    if (!res.ffmpeg) missing.push("FFmpeg not found. Install FFmpeg and add it to PATH.");
-    if (!res.deno) missing.push("Deno not found. Install Deno and add it to PATH.");
-    if (missing.length) showToastList(missing, 4200);
+
+    if (res.ffmpeg && res.deno) return; // all deps present
+
+    // Show setup overlay and start auto-install
+    if (setupOverlay) setupOverlay.classList.remove("hidden");
+    await pywebview.api.install_deps();
   } catch (e) {
-    log(`[ui] system_status failed: ${e}`);
+    log(`[ui] checkDependencies failed: ${e}`);
+    if (setupOverlay) setupOverlay.classList.add("hidden");
   }
 }
 
@@ -562,8 +599,12 @@ cookiesEl.addEventListener("change", async () => {
 });
 
 loadOptions();
-syncOptionsToPython();
-checkDependencies();
+
+// pywebview API bridge isn't available until the 'pywebviewready' event fires
+window.addEventListener("pywebviewready", () => {
+  syncOptionsToPython();
+  checkDependencies();
+});
 
 
 function initTheme() {
