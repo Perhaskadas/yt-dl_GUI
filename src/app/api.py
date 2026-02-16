@@ -175,7 +175,7 @@ class Api:
 
     def check_for_updates(self):
         def _run():
-            result = {"app": None, "pip": None}
+            result: dict[str, dict | None] = {"app": None, "pip": None}
             try:
                 result["app"] = updater.check_for_app_update(app.__version__)
             except Exception:
@@ -281,14 +281,14 @@ class Api:
             if b:
                 ydl_opts["cookiesfrombrowser"] = (b,)
 
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                data = ydl.extract_info(url, download=False)
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:  # type: ignore[arg-type]
+                data: dict = ydl.extract_info(url, download=False)  # type: ignore[assignment]
 
             if not data:
                 return {"ok": False, "error": "Preview failed"}
 
-            if isinstance(data, dict) and data.get("entries"):
-                data = next(iter(data["entries"]), data)
+            if data.get("entries"):
+                data = dict(next(iter(data["entries"]), data))
 
             return {"ok": True, "preview": _build_preview(data, url)}
 
