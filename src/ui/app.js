@@ -649,10 +649,17 @@ cookiesEl.addEventListener("change", async () => {
 loadOptions();
 
 // pywebview API bridge isn't available until the 'pywebviewready' event fires
-window.addEventListener("pywebviewready", () => {
+window.addEventListener("pywebviewready", async () => {
   syncOptionsToPython();
   checkDependencies();
   pywebview.api.check_for_updates();
+  try {
+    const version = await pywebview.api.get_version();
+    const el = document.getElementById("appVersion");
+    if (el && version) el.textContent = `v${version}`;
+  } catch (e) {
+    // non-critical, ignore
+  }
 });
 
 

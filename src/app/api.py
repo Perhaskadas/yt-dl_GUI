@@ -173,6 +173,9 @@ class Api:
         t.start()
         return {"ok": True}
 
+    def get_version(self) -> str:
+        return app.__version__
+
     def check_for_updates(self):
         def _run():
             result: dict[str, dict | None] = {"app": None, "pip": None}

@@ -414,6 +414,17 @@ html[data-theme="light"] .tab-bar .tab-btn.active {
   }
 }
 
+.app-version {
+  position: fixed;
+  bottom: 4px;
+  left: 6px;
+  font-size: 10px;
+  color: var(--text-muted);
+  opacity: 0.4;
+  pointer-events: none;
+  letter-spacing: 0.3px;
+}
+
 @media (max-width: 480px) {
   .app { padding: var(--space-3); }
   .grid { gap: var(--space-3); }
