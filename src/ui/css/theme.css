@@ -1,175 +1,173 @@
+/* Semantic tokens modelled on Apple's system colors (HIG), tuned so every
+   text/background pair meets WCAG 2.2 AA (4.5:1). Dark values are repeated
+   for the "follow system" case before JS has set data-theme. */
+
 :root {
-  --md-sys-color-primary: #8ab4f8;
-  --md-sys-color-on-primary: #0b1d3a;
-  --md-sys-color-primary-container: #233047;
-  --md-sys-color-on-primary-container: #d8e6ff;
+  color-scheme: light;
 
-  --md-sys-color-secondary: #81c995;
-  --md-sys-color-on-secondary: #092016;
-  --md-sys-color-secondary-container: #1f3a2a;
-  --md-sys-color-on-secondary-container: #c7f2d1;
+  /* Backgrounds */
+  --window-bg: #ececec;
+  --toolbar-bg: #e3e3e3;
+  --grouped-bg: #ffffff;
+  --control-bg: #ffffff;
+  --control-bg-hover: #f5f5f5;
+  --control-bg-active: #e6e6e6;
+  --field-bg: #ffffff;
+  --sheet-bg: #f6f6f6;
+  --overlay: rgba(0, 0, 0, 0.28);
 
-  --md-sys-color-tertiary: #fdd663;
-  --md-sys-color-on-tertiary: #2b1b00;
-  --md-sys-color-tertiary-container: #4a3a0c;
-  --md-sys-color-on-tertiary-container: #ffe8a3;
+  /* Labels */
+  --label: rgba(0, 0, 0, 0.88);
+  --secondary-label: rgba(0, 0, 0, 0.62);
+  --tertiary-label: rgba(0, 0, 0, 0.42);
+  --placeholder: rgba(0, 0, 0, 0.45);
 
-  --md-sys-color-error: #f28b82;
-  --md-sys-color-on-error: #3a0d0a;
-  --md-sys-color-error-container: #5c1a16;
-  --md-sys-color-on-error-container: #ffd9d6;
+  /* Lines */
+  --separator: rgba(0, 0, 0, 0.1);
+  --control-border: rgba(0, 0, 0, 0.16);
+  --control-border-bottom: rgba(0, 0, 0, 0.26);
 
-  --md-sys-color-surface: #202124;
-  --md-sys-color-on-surface: #e8eaed;
-  --md-sys-color-surface-variant: #303134;
-  --md-sys-color-on-surface-variant: #c7c9cc;
-  --md-sys-color-outline: #5f6368;
-  --md-sys-color-outline-variant: #3c4043;
+  /* System colors */
+  --accent: #0064d2;
+  --accent-hover: #0058ba;
+  --accent-pressed: #004c9f;
+  --on-accent: #ffffff;
+  --focus-ring: rgba(0, 100, 210, 0.45);
+  --red: #c4001a;
+  --green: #1a6b2e;
+  --orange: #b25000;
 
-  --surface-container-low: #1e1f22;
-  --surface-container: #242528;
-  --surface-container-high: #2a2b2f;
-  --surface-container-highest: #2f3135;
+  --progress-track: rgba(0, 0, 0, 0.1);
+  --skeleton: rgba(0, 0, 0, 0.07);
+  --skeleton-highlight: rgba(0, 0, 0, 0.03);
 
-  --bg-grad-1: #1b2a41;
-  --bg-grad-2: #1f3327;
-  --bg-grad-3: #332a1a;
-  --glow-1: rgba(138,180,248,0.2);
-  --glow-2: rgba(129,201,149,0.18);
-  --glow-3: rgba(253,214,99,0.18);
+  --toast-bg: rgba(40, 40, 40, 0.94);
+  --toast-text: #ffffff;
 
-  --text-muted: #b2b6bc;
-  --text-soft: #d0d4da;
+  --shadow-control: 0 0.5px 1px rgba(0, 0, 0, 0.12);
+  --shadow-group: 0 0 0 0.5px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-sheet: 0 0 0 0.5px rgba(0, 0, 0, 0.15), 0 20px 50px rgba(0, 0, 0, 0.3);
 
-  /* Spacing scale */
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 20px;
-  --space-6: 24px;
-  --space-7: 32px;
-  --space-8: 40px;
-  --space-9: 48px;
-  --space-10: 64px;
+  /* Typography: macOS text styles (body is 13px on desktop). All sizes are
+     rem so Cmd/Ctrl +/- scales the whole UI, like Dynamic Type. */
+  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Cascadia Mono", monospace;
+  --text-title: 1.15rem;     /* 15px  title3 */
+  --text-headline: 1rem;     /* 13px  headline (semibold) */
+  --text-body: 1rem;         /* 13px  body */
+  --text-callout: 0.923rem;  /* 12px  callout */
+  --text-footnote: 0.846rem; /* 11px  footnote */
 
-  --radius-lg: 22px;
-  --radius-md: 16px;
-  --radius-sm: 12px;
+  /* Spacing (4px base) */
+  --space-1: 0.308rem; /* 4  */
+  --space-2: 0.615rem; /* 8  */
+  --space-3: 0.923rem; /* 12 */
+  --space-4: 1.231rem; /* 16 */
+  --space-5: 1.538rem; /* 20 */
+  --space-6: 1.846rem; /* 24 */
 
-  --shadow-1: 0 2px 8px rgba(0,0,0,0.18), 0 6px 20px rgba(0,0,0,0.12);
-  --shadow-2: 0 6px 16px rgba(0,0,0,0.22), 0 14px 44px rgba(0,0,0,0.2);
-  --shadow-3: 0 10px 24px rgba(0,0,0,0.28), 0 22px 70px rgba(0,0,0,0.3);
+  /* Shape and sizing */
+  --radius-control: 6px;
+  --radius-group: 10px;
+  --radius-sheet: 12px;
+  --control-height: 2.154rem;  /* 28px */
+  --button-height: 2.154rem;   /* 28px; >= 24px WCAG 2.5.8 target size */
 
-  --ring: rgba(138,180,248,0.35);
-
-  --btn-filled: #1a73e8;
-  --btn-tonal: #303134;
-
-  --progress-track: #2b2f34;
-  --progress-indicator: var(--md-sys-color-primary);
-  --progress-glow: rgba(138,180,248,0.35);
-
-  --shimmer-base: #2a2b2f;
-  --shimmer-highlight: #3c4043;
-
-  --overlay: rgba(15,17,20,0.6);
-
-  --toast-border: rgba(242,139,130,0.35);
-  --toast-bg: rgba(56,24,23,0.9);
-  --toast-text: #ffd9d6;
-
-  --success-border: rgba(129,201,149,0.4);
-  --success-tint: rgba(129,201,149,0.22);
-
-  --error-border: rgba(242,139,130,0.4);
-  --error-tint: rgba(242,139,130,0.28);
-
-  --tooltip-bg: #202124;
-  --tooltip-text: #e8eaed;
-  --tooltip-border: #3c4043;
-
-  --icon-sun: #fdd663;
-  --icon-moon: #e8eaed;
-  --icon-moon-cut: #202124;
+  /* Motion (kiln polish-motion): durations scale with travel distance,
+     everything stays at or under 300ms, standard easing curves only */
+  --ease: cubic-bezier(0.2, 0, 0, 1);            /* standard */
+  --ease-decelerate: cubic-bezier(0, 0, 0, 1);   /* entering */
+  --ease-accelerate: cubic-bezier(0.3, 0, 1, 1); /* exiting */
+  --duration-fast: 100ms;     /* press feedback, small state changes */
+  --duration: 150ms;          /* hover, expand/collapse */
+  --duration-standard: 200ms; /* content swaps */
+  --duration-emphasized: 250ms; /* sheets, theme cross-fade */
 }
 
-html[data-theme="light"] {
-  --md-sys-color-primary: #1a73e8;
-  --md-sys-color-on-primary: #ffffff;
-  --md-sys-color-primary-container: #d2e3fc;
-  --md-sys-color-on-primary-container: #0b1d3a;
+:root[data-theme="dark"] {
+  color-scheme: dark;
 
-  --md-sys-color-secondary: #34a853;
-  --md-sys-color-on-secondary: #ffffff;
-  --md-sys-color-secondary-container: #d7f0db;
-  --md-sys-color-on-secondary-container: #0f2b17;
+  --window-bg: #1e1e1e;
+  --toolbar-bg: #2a2a2a;
+  --grouped-bg: #282828;
+  --control-bg: #3a3a3a;
+  --control-bg-hover: #444444;
+  --control-bg-active: #4d4d4d;
+  --field-bg: #1f1f1f;
+  --sheet-bg: #2c2c2c;
+  --overlay: rgba(0, 0, 0, 0.45);
 
-  --md-sys-color-tertiary: #fbbc04;
-  --md-sys-color-on-tertiary: #2b1b00;
-  --md-sys-color-tertiary-container: #ffe9a6;
-  --md-sys-color-on-tertiary-container: #3a2a00;
+  --label: rgba(255, 255, 255, 0.9);
+  --secondary-label: rgba(255, 255, 255, 0.62);
+  --tertiary-label: rgba(255, 255, 255, 0.4);
+  --placeholder: rgba(255, 255, 255, 0.45);
 
-  --md-sys-color-error: #ea4335;
-  --md-sys-color-on-error: #ffffff;
-  --md-sys-color-error-container: #fce8e6;
-  --md-sys-color-on-error-container: #3a0b07;
+  --separator: rgba(255, 255, 255, 0.09);
+  --control-border: rgba(255, 255, 255, 0.1);
+  --control-border-bottom: rgba(255, 255, 255, 0.06);
 
-  --md-sys-color-surface: #f8f9fa;
-  --md-sys-color-on-surface: #202124;
-  --md-sys-color-surface-variant: #e8eaed;
-  --md-sys-color-on-surface-variant: #5f6368;
-  --md-sys-color-outline: #9aa0a6;
-  --md-sys-color-outline-variant: #dadce0;
+  --accent: #0a6cd9;
+  --accent-hover: #1a78e0;
+  --accent-pressed: #0a5fc0;
+  --on-accent: #ffffff;
+  --focus-ring: rgba(77, 163, 255, 0.55);
+  --red: #ff6b61;
+  --green: #3ddc6b;
+  --orange: #ffa94d;
 
-  --surface-container-low: #ffffff;
-  --surface-container: #f1f3f4;
-  --surface-container-high: #e8eaed;
-  --surface-container-highest: #e0e3e7;
+  --progress-track: rgba(255, 255, 255, 0.12);
+  --skeleton: rgba(255, 255, 255, 0.07);
+  --skeleton-highlight: rgba(255, 255, 255, 0.12);
 
-  --bg-grad-1: #e8f0fe;
-  --bg-grad-2: #e6f4ea;
-  --bg-grad-3: #fef7e0;
-  --glow-1: rgba(26,115,232,0.16);
-  --glow-2: rgba(52,168,83,0.14);
-  --glow-3: rgba(251,188,4,0.16);
+  --toast-bg: rgba(60, 60, 60, 0.96);
+  --toast-text: #ffffff;
 
-  --text-muted: #474c52;
-  --text-soft: #3c4043;
+  --shadow-control: 0 0.5px 1px rgba(0, 0, 0, 0.3);
+  --shadow-group: 0 0 0 0.5px rgba(255, 255, 255, 0.06);
+  --shadow-sheet: 0 0 0 0.5px rgba(255, 255, 255, 0.12), 0 20px 50px rgba(0, 0, 0, 0.55);
+}
 
-  --shadow-1: 0 2px 6px rgba(32,33,36,0.08), 0 4px 14px rgba(32,33,36,0.06);
-  --shadow-2: 0 4px 12px rgba(32,33,36,0.1), 0 10px 28px rgba(32,33,36,0.1);
-  --shadow-3: 0 8px 18px rgba(32,33,36,0.14), 0 18px 50px rgba(32,33,36,0.12);
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
 
-  --ring: rgba(26,115,232,0.22);
+    --window-bg: #1e1e1e;
+    --toolbar-bg: #2a2a2a;
+    --grouped-bg: #282828;
+    --control-bg: #3a3a3a;
+    --control-bg-hover: #444444;
+    --control-bg-active: #4d4d4d;
+    --field-bg: #1f1f1f;
+    --sheet-bg: #2c2c2c;
+    --overlay: rgba(0, 0, 0, 0.45);
 
-  --btn-filled: #1a73e8;
-  --btn-tonal: #e8eaed;
+    --label: rgba(255, 255, 255, 0.9);
+    --secondary-label: rgba(255, 255, 255, 0.62);
+    --tertiary-label: rgba(255, 255, 255, 0.4);
+    --placeholder: rgba(255, 255, 255, 0.45);
 
-  --progress-track: #e0e3e7;
-  --progress-indicator: var(--md-sys-color-primary);
-  --progress-glow: rgba(26,115,232,0.3);
+    --separator: rgba(255, 255, 255, 0.09);
+    --control-border: rgba(255, 255, 255, 0.1);
+    --control-border-bottom: rgba(255, 255, 255, 0.06);
 
-  --shimmer-base: #e0e3e7;
-  --shimmer-highlight: #f1f3f4;
+    --accent: #0a6cd9;
+    --accent-hover: #1a78e0;
+    --accent-pressed: #0a5fc0;
+    --on-accent: #ffffff;
+    --focus-ring: rgba(77, 163, 255, 0.55);
+    --red: #ff6b61;
+    --green: #3ddc6b;
+    --orange: #ffa94d;
 
-  --overlay: rgba(32,33,36,0.25);
+    --progress-track: rgba(255, 255, 255, 0.12);
+    --skeleton: rgba(255, 255, 255, 0.07);
+    --skeleton-highlight: rgba(255, 255, 255, 0.12);
 
-  --toast-border: rgba(234,67,53,0.3);
-  --toast-bg: rgba(255,255,255,0.95);
-  --toast-text: #3a0b07;
+    --toast-bg: rgba(60, 60, 60, 0.96);
+    --toast-text: #ffffff;
 
-  --success-border: rgba(52,168,83,0.35);
-  --success-tint: rgba(52,168,83,0.18);
-
-  --error-border: rgba(234,67,53,0.35);
-  --error-tint: rgba(234,67,53,0.16);
-
-  --tooltip-bg: #ffffff;
-  --tooltip-text: #202124;
-  --tooltip-border: rgba(60,64,67,0.2);
-
-  --icon-sun: #fbbc04;
-  --icon-moon: #5f6368;
-  --icon-moon-cut: #f8f9fa;
+    --shadow-control: 0 0.5px 1px rgba(0, 0, 0, 0.3);
+    --shadow-group: 0 0 0 0.5px rgba(255, 255, 255, 0.06);
+    --shadow-sheet: 0 0 0 0.5px rgba(255, 255, 255, 0.12), 0 20px 50px rgba(0, 0, 0, 0.55);
+  }
 }

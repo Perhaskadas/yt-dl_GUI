@@ -9,7 +9,7 @@ $assets = Join-Path $root "src\\assets"
 
 pyinstaller `
   --noconsole `
-  --onefile `
+  --onedir `
   --name "yt-dlp-gui" `
   --icon $icon `
   --collect-all webview `

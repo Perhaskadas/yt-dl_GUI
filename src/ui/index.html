@@ -1,198 +1,299 @@
 <!doctype html>
-<html data-theme="dark">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>yt-dlp GUI</title>
+    <meta name="color-scheme" content="light dark" />
+    <title>YouTube Downloader</title>
     <link rel="icon" href="../assets/yt-dlp-gui.ico">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/theme.css">
     <link rel="stylesheet" href="css/base.css">
     <link rel="stylesheet" href="css/layout.css">
     <link rel="stylesheet" href="css/overlays.css">
+    <link rel="stylesheet" href="css/motion.css">
     <script defer src="./app.js"></script>
   </head>
 
   <body>
-    <div class="app">
-      <header class="topbar reveal">
-        <div class="brand">
-          <div class="brand-mark" aria-hidden="true"></div>
-          <div class="brand-copy">
-            <div class="brand-title">yt-dlp</div>
-            <div class="brand-sub">Local Youtube Video Downloader</div>
-          </div>
-        </div>
-
-        <div class="actions">
-          <button id="themeToggle" class="btn ghost theme-toggle" aria-label="Toggle theme" title="Toggle theme">
-            <span class="icon-sun" aria-hidden="true"></span>
-            <span class="icon-moon" aria-hidden="true"></span>
-          </button>
-          <button id="btnStop" class="btn ghost" disabled>Stop</button>
-          <button id="btnDownload" class="btn primary">Download</button>
-        </div>
+    <div class="window">
+      <header class="toolbar">
+        <h1 class="toolbar-title">YouTube Downloader</h1>
+        <button id="themeToggle" class="btn icon-btn" type="button" aria-label="Switch to light appearance" title="Toggle appearance">
+          <svg class="icon icon-moon" viewBox="0 0 16 16" aria-hidden="true"><path d="M6.2 1.6a6.5 6.5 0 1 0 8.2 8.2A5.5 5.5 0 0 1 6.2 1.6Z"/></svg>
+          <svg class="icon icon-sun" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3"/><path d="M8 .75v2M8 13.25v2M.75 8h2M13.25 8h2M2.87 2.87l1.42 1.42M11.71 11.71l1.42 1.42M2.87 13.13l1.42-1.42M11.71 4.29l1.42-1.42"/></svg>
+        </button>
       </header>
 
-      <main class="grid">
-        <section class="card reveal delay-1">
-          <div class="section-head">
-            <h2>Download</h2>
+      <main class="content">
+        <!-- Two panes on wide windows (media | options); one column when narrow -->
+        <div class="pane pane-media">
+          <!-- URL -->
+          <div class="url-field">
+            <label for="url" class="visually-hidden">Video URL</label>
+            <svg class="icon url-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M6.5 9.5a3 3 0 0 0 4.24 0l2.5-2.5a3 3 0 0 0-4.24-4.24l-.75.75M9.5 6.5a3 3 0 0 0-4.24 0l-2.5 2.5a3 3 0 0 0 4.24 4.24l.75-.75"/></svg>
+            <input id="url" class="input url-input" type="url" placeholder="Paste a video or playlist URL" autocomplete="off" spellcheck="false" autofocus />
           </div>
 
-          <label class="label">URL</label>
-          <input id="url" class="input" placeholder="Paste a video or playlist URL" />
-
-          <div class="row">
-            <div class="grow">
-              <label class="label">Output folder</label>
-              <input id="outDir" class="input" placeholder="Choose a folder" />
-            </div>
-            <div class="row-end">
-              <label class="label">&nbsp;</label>
-              <button id="btnBrowse" class="btn">Browse</button>
-            </div>
-          </div>
-
-          <div class="row-2col">
-            <div class="grow">
-              <label class="label inline">
-                Preset
-                <span class="info-tip" tabindex="0" aria-label="Preset info">
-                  <span class="info-tip-content">
-                    <strong>Best (video+audio)</strong><br>
-                    Highest quality video and audio.<br>
-                    May produce .webm or .mkv files.<br><br>
-
-                    <strong>Best (MP4)</strong><br>
-                    Highest quality, always .mp4 output.<br>
-                    Best compatibility with most players.<br><br>
-
-                    <strong>Best up to 1080p</strong><br>
-                    Limits video to 1080p to save space.<br>
-                    Great balance of quality and size.<br><br>
-
-                    <strong>Best (video only)</strong><br>
-                    Highest quality video, no audio.<br>
-                    Useful for editing or adding audio later.<br><br>
-
-                    <strong>Audio only (best)</strong><br>
-                    Downloads original high-quality audio.<br>
-                    Fast and smallest files.<br><br>
-
-                    <strong>Audio only (MP3)</strong><br>
-                    Converts audio to MP3 for compatibility.<br>
-                    Slightly larger and slower.
-                  </span>
-                </span>
-              </label>
-
-              <select id="presetEl" class="input">
-                <option value="best">Best (video+audio)</option>
-                <option value="mp4">Best (MP4)</option>
-                <option value="1080p">Best up to 1080p (video+audio)</option>
-                <option value="videoOnly">Best (video only)</option>
-                <option value="audio">Audio only (best)</option>
-                <option value="mp3">Audio only (MP3)</option>
-              </select>
+          <!-- Preview -->
+          <section class="group preview-group" aria-label="Preview" aria-live="polite">
+            <div id="previewEmpty" class="preview-empty">
+              <svg class="icon preview-empty-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="3"/><path d="m10 9.5 4.5 2.5-4.5 2.5Z"/></svg>
+              <div class="preview-empty-text">No video selected</div>
+              <div class="footnote">Paste a link above to see a preview.</div>
             </div>
 
-            <div class="grow">
-              <label class="label inline">
-                Cookies
-                <span class="info-tip" tabindex="0" aria-label="Cookies info">
-                  <span class="info-tip-content">
-                    Sometimes your login cookies are required to download a movie.<br>
-                    If downloads are not working select a browser where you are logged into the website.
-                  </span>
-                </span>
-              </label>
-
-              <select id="cookiesEl" class="input">
-                <option value="">None</option>
-                <option value="firefox">Firefox</option>
-                <option value="chrome">Chrome</option>
-                <option value="safari">Safari</option>
-              </select>
+            <div id="previewSkeleton" class="preview hidden" aria-busy="true">
+              <div class="preview-thumb-wrap skeleton"></div>
+              <div class="preview-meta">
+                <div class="skeleton skeleton-line w-80"></div>
+                <div class="skeleton skeleton-line w-40"></div>
+              </div>
             </div>
-          </div>
 
+            <div id="previewPanel" class="preview hidden">
+              <div class="preview-thumb-wrap">
+                <img id="pvThumb" class="preview-thumb hidden" alt="" />
+              </div>
+              <div class="preview-meta">
+                <div id="pvTitle" class="preview-title"></div>
+                <div id="pvBadges" class="preview-badges footnote"></div>
+              </div>
+              <button id="pvRefreshBtn" class="btn icon-btn" type="button" aria-label="Reload preview" title="Reload preview" disabled>
+                <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2v3h-3"/></svg>
+              </button>
+            </div>
+          </section>
+
+          <!-- Playlist contents (shown when downloading a whole playlist) -->
+          <section id="playlistGroup" class="group playlist-group hidden" aria-labelledby="playlistHeading">
+            <div class="playlist-head">
+              <h2 id="playlistHeading" class="group-heading">Playlist</h2>
+              <span id="playlistSummary" class="footnote"></span>
+            </div>
+            <ol id="playlistList" class="playlist-list" tabindex="0" aria-label="Videos in this playlist"></ol>
+            <div id="playlistMore" class="footnote playlist-more hidden"></div>
+          </section>
+
+          <!-- Log -->
+          <details id="logDetails" class="log-details">
+            <summary>Log</summary>
+            <pre id="logEl" class="log" tabindex="0" aria-label="Download log"></pre>
+          </details>
+        </div>
+
+        <div class="pane pane-options">
+          <!-- Format -->
+          <section class="group form-group" aria-labelledby="formatHeading">
+            <h2 id="formatHeading" class="group-heading">Format</h2>
+
+            <div class="form-row">
+              <span class="form-label" id="kindLabel">Type</span>
+              <div class="form-control">
+                <div class="segmented" role="radiogroup" aria-labelledby="kindLabel">
+                  <label><input type="radio" name="kind" value="video" checked><span>Video</span></label>
+                  <label><input type="radio" name="kind" value="audio"><span>Audio</span></label>
+                  <label><input type="radio" name="kind" value="video_only"><span>Video only</span></label>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-row" data-show-for="video video_only">
+              <label for="heightEl" class="form-label">Quality</label>
+              <div class="form-control">
+                <select id="heightEl" class="select">
+                  <option value="0">Best available</option>
+                  <option value="2160">Up to 4K (2160p)</option>
+                  <option value="1440">Up to 1440p</option>
+                  <option value="1080">Up to 1080p</option>
+                  <option value="720">Up to 720p</option>
+                  <option value="480">Up to 480p</option>
+                  <option value="360">Up to 360p</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row" data-show-for="video video_only">
+              <label for="containerEl" class="form-label">File type</label>
+              <div class="form-control">
+                <select id="containerEl" class="select" aria-describedby="containerHelp">
+                  <option value="auto">Automatic</option>
+                  <option value="mp4">MP4</option>
+                  <option value="mp4_h264">MP4, H.264 (most compatible)</option>
+                  <option value="webm">WebM</option>
+                  <option value="mkv">MKV</option>
+                </select>
+                <div id="containerHelp" class="footnote"></div>
+              </div>
+            </div>
+
+            <div class="form-row" data-show-for="audio">
+              <label for="audioFormatEl" class="form-label">File type</label>
+              <div class="form-control">
+                <select id="audioFormatEl" class="select" aria-describedby="audioFormatHelp">
+                  <option value="best">Original (no conversion)</option>
+                  <option value="mp3">MP3</option>
+                  <option value="m4a">M4A (AAC)</option>
+                  <option value="opus">Opus</option>
+                  <option value="flac">FLAC (lossless)</option>
+                  <option value="wav">WAV (uncompressed)</option>
+                </select>
+                <div id="audioFormatHelp" class="footnote"></div>
+              </div>
+            </div>
+
+            <div class="form-row" data-show-for="audio" data-lossy-only>
+              <label for="audioQualityEl" class="form-label">Bitrate</label>
+              <div class="form-control">
+                <select id="audioQualityEl" class="select">
+                  <option value="0">Best (variable)</option>
+                  <option value="320K">320 kbps</option>
+                  <option value="256K">256 kbps</option>
+                  <option value="192K">192 kbps</option>
+                  <option value="128K">128 kbps</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row" data-show-for="video video_only">
+              <label for="subtitlesEl" class="form-label">Subtitles</label>
+              <div class="form-control">
+                <select id="subtitlesEl" class="select" aria-describedby="subtitlesHelp">
+                  <option value="off">None</option>
+                  <option value="en">English</option>
+                  <option value="en_auto">English, including auto-generated</option>
+                </select>
+                <div id="subtitlesHelp" class="footnote">Embedded in the video file. Turn them on in your player.</div>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <span class="form-label" aria-hidden="true"></span>
+              <div class="form-control">
+                <label class="checkbox">
+                  <input id="embedEl" type="checkbox">
+                  <span>Add cover art, title info and chapters</span>
+                </label>
+                <div id="embedHelp" class="footnote hidden"></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Range -->
+          <section class="group form-group" aria-labelledby="rangeHeading">
+            <h2 id="rangeHeading" class="group-heading">Range</h2>
+
+            <div id="playlistRow" class="form-row hidden">
+              <span class="form-label" id="playlistLabel">Playlist</span>
+              <div class="form-control">
+                <div class="segmented" role="radiogroup" aria-labelledby="playlistLabel">
+                  <label><input type="radio" name="playlist" value="single" checked><span>This video only</span></label>
+                  <label><input type="radio" name="playlist" value="all"><span>Whole playlist</span></label>
+                </div>
+                <div id="playlistHelp" class="footnote">Whole playlists are saved into a folder named after the playlist.</div>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <span class="form-label" id="clipLabel">Clip</span>
+              <div class="form-control">
+                <div class="clip-field" role="group" aria-labelledby="clipLabel">
+                  <label class="visually-hidden" for="clipStartEl">Start time</label>
+                  <input id="clipStartEl" class="input time-input" placeholder="Start" inputmode="numeric" spellcheck="false" aria-describedby="clipHelp">
+                  <span class="clip-sep" aria-hidden="true">–</span>
+                  <label class="visually-hidden" for="clipEndEl">End time</label>
+                  <input id="clipEndEl" class="input time-input" placeholder="End" inputmode="numeric" spellcheck="false" aria-describedby="clipHelp">
+                  <button id="clipClearBtn" class="btn icon-btn hidden" type="button" aria-label="Clear clip times" title="Clear">
+                    <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="m4.5 4.5 7 7M11.5 4.5l-7 7"/></svg>
+                  </button>
+                </div>
+                <div id="clipHelp" class="footnote">Leave empty for the whole video. Times like 90, 1:30 or 1:02:30. Links with a timestamp fill in the start.</div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Download -->
+          <section class="group form-group" aria-labelledby="downloadHeading">
+            <h2 id="downloadHeading" class="group-heading">Download</h2>
+
+            <div class="form-row">
+              <label for="cookiesEl" class="form-label">Cookies</label>
+              <div class="form-control">
+                <!-- Filled from list_browsers() with the browsers installed on this machine -->
+                <select id="cookiesEl" class="select" aria-describedby="cookiesHelp">
+                  <option value="">None</option>
+                </select>
+                <div id="cookiesHelp" class="footnote">Use a browser where you're signed in, for age-restricted or members-only videos.</div>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <label for="outDir" class="form-label">Save to</label>
+              <div class="form-control">
+                <div class="folder-field">
+                  <input id="outDir" class="input" placeholder="Choose a folder" spellcheck="false" />
+                  <button id="btnBrowse" class="btn" type="button">Choose…</button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Advanced (collapsed by default) -->
+          <details id="advancedDetails" class="group form-group advanced-group">
+            <summary class="group-heading">Advanced</summary>
+
+            <div class="form-row">
+              <label for="fragmentsEl" class="form-label">Connections</label>
+              <div class="form-control">
+                <select id="fragmentsEl" class="select" aria-describedby="fragmentsHelp">
+                  <option value="1">1 (standard)</option>
+                  <option value="4">4</option>
+                  <option value="8">8</option>
+                  <option value="16">16</option>
+                </select>
+                <div id="fragmentsHelp" class="footnote">Downloads several pieces of a video at once. Only applies to sites that stream in fragments; it has no effect on YouTube.</div>
+              </div>
+            </div>
+          </details>
+        </div>
+      </main>
+
+      <footer class="statusbar">
+        <div class="status-area">
           <div class="progress-row">
-            <div class="progress">
+            <div class="progress" role="progressbar" aria-label="Download progress" aria-valuemin="0" aria-valuemax="100">
               <div class="progress-indicator"></div>
             </div>
             <span id="progressPct" class="progress-pct">0%</span>
           </div>
-          <div class="muted" id="status">Ready</div>
-        </section>
-
-        <section class="card reveal delay-2">
-          <div class="panel-top">
-            <div class="section-head compact">
-              <h2>Preview</h2>
-            </div>
-            <div class="tab-bar">
-              <button class="tab-btn active" data-tab="preview">Preview</button>
-              <button class="tab-btn" data-tab="logs">Logs</button>
-            </div>
-          </div>
-
-          <div class="panel-body">
-            <!-- Empty state -->
-            <div id="previewEmpty" class="preview-empty">
-              <div class="preview-empty-icon" aria-hidden="true"></div>
-              <div class="preview-empty-text">No video loaded</div>
-              <div class="preview-empty-hint">Paste a URL above to preview</div>
-            </div>
-
-            <!-- Skeleton loading state -->
-            <div id="previewSkeleton" class="preview-skeleton hidden">
-              <div class="skeleton-thumb"></div>
-              <div class="skeleton-line medium"></div>
-              <div class="skeleton-line short"></div>
-              <div class="skeleton-line xs"></div>
-            </div>
-
-            <!-- Content state -->
-            <div id="previewPanel" class="preview hidden">
-              <img id="pvThumb" class="preview-thumb hidden" alt="Thumbnail" />
-
-              <div class="preview-meta">
-                <div id="pvTitle" class="preview-title"></div>
-                <div id="pvBadges" class="preview-badges"></div>
-              </div>
-
-              <div class="preview-actions">
-                <button id="pvRefreshBtn" class="btn" disabled>Refresh</button>
-              </div>
-            </div>
-
-            <div id="logPanel" class="hidden">
-              <pre id="logEl" class="log"></pre>
-            </div>
-          </div>
-        </section>
-      </main>
+          <div id="status" class="status-text" role="status">Ready</div>
+        </div>
+        <div class="status-actions">
+          <span id="appVersion" class="app-version"></span>
+          <button id="btnStop" class="btn" type="button" disabled>Stop</button>
+          <button id="btnDownload" class="btn primary" type="button">
+            <span class="spinner" aria-hidden="true"></span>
+            <span>Download</span>
+          </button>
+        </div>
+      </footer>
     </div>
 
-    <div id="doneModal" class="modal hidden" role="dialog" aria-modal="true">
-      <div class="modal-content card">
-        <h2 id="doneTitle" class="modal-heading">Download finished</h2>
-        <p id="doneText"></p>
-
-        <div class="modal-actions">
-          <button id="btnOpenFolder" class="btn primary">Open output folder</button>
-          <button id="btnNextDownload" class="btn">Download next</button>
+    <div id="doneModal" class="sheet-backdrop hidden">
+      <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="doneTitle">
+        <div class="sheet-icon" aria-hidden="true"></div>
+        <h2 id="doneTitle" class="sheet-title">Download finished</h2>
+        <p id="doneText" class="sheet-text"></p>
+        <div class="sheet-actions">
+          <button id="btnNextDownload" class="btn" type="button">Done</button>
+          <button id="btnOpenFolder" class="btn primary" type="button">Show in Folder</button>
         </div>
       </div>
     </div>
 
-    <div id="setupOverlay" class="modal hidden">
-      <div class="modal-content card">
-        <h2 class="modal-heading">Setting up</h2>
-        <p id="setupText">Checking dependencies...</p>
+    <div id="setupOverlay" class="sheet-backdrop hidden">
+      <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="setupTitle">
+        <h2 id="setupTitle" class="sheet-title">Setting up</h2>
+        <p id="setupText" class="sheet-text">Checking dependencies…</p>
         <div class="progress-row visible">
           <div class="progress indeterminate">
             <div id="setupIndicator" class="progress-indicator"></div>
@@ -202,19 +303,18 @@
       </div>
     </div>
 
-    <div id="updateModal" class="modal hidden" role="dialog" aria-modal="true">
-      <div class="modal-content card">
-        <h2 class="modal-heading">Update available</h2>
-        <p id="updateVersion"></p>
+    <div id="updateModal" class="sheet-backdrop hidden">
+      <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="updateTitle">
+        <h2 id="updateTitle" class="sheet-title">Update available</h2>
+        <p id="updateVersion" class="sheet-text"></p>
         <pre id="updateChangelog" class="update-changelog"></pre>
-        <div class="modal-actions">
+        <div class="sheet-actions">
+          <button id="btnUpdateDismiss" class="btn" type="button">Later</button>
           <a id="btnUpdateDownload" class="btn primary" target="_blank" rel="noopener">Download</a>
-          <button id="btnUpdateDismiss" class="btn">Later</button>
         </div>
       </div>
     </div>
 
-    <div id="toast" class="toast hidden"></div>
-    <div id="appVersion" class="app-version"></div>
+    <div id="toast" class="toast hidden" role="alert"></div>
   </body>
 </html>

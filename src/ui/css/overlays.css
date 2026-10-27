@@ -1,205 +1,150 @@
-.modal.hidden { display: none; }
+/* ---------- Sheets (modal dialogs) ---------- */
 
-.modal {
+.sheet-backdrop {
   position: fixed;
   inset: 0;
-  background: var(--overlay);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  z-index: 50;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
+  padding-top: 3.692rem; /* drops from just below the toolbar, like a macOS sheet */
+  background: var(--overlay);
+  animation: fadeIn var(--duration) var(--ease);
+}
+
+.sheet {
+  width: min(24.615rem, calc(100% - 2 * var(--space-4)));
   padding: var(--space-5);
-  z-index: 9999;
-}
-
-.modal-content {
-  width: min(560px, 96vw);
-  animation: modalIn 300ms cubic-bezier(0.22, 0.61, 0.36, 1);
-  position: relative;
-  overflow: hidden;
-  border-color: var(--modal-border);
-}
-
-.modal-content::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.18;
-  background: radial-gradient(700px 320px at 20% 0%, var(--modal-tint), transparent 60%);
-}
-
-.modal-content.success {
-  --modal-border: var(--success-border);
-  --modal-tint: var(--success-tint);
-}
-
-.modal-content.error {
-  --modal-border: var(--error-border);
-  --modal-tint: var(--error-tint);
-}
-
-.modal-content .modal-heading {
+  border-radius: var(--radius-sheet);
+  background: var(--sheet-bg);
+  box-shadow: var(--shadow-sheet);
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: var(--space-2);
+  animation: sheetIn 220ms var(--ease);
 }
 
-.modal-content .modal-heading::before {
-  font-size: 20px;
-  line-height: 1;
+.sheet-title {
+  font-size: var(--text-headline);
+  font-weight: 600;
 }
 
-.modal-content.success .modal-heading::before {
-  content: "\2713";
-  color: var(--md-sys-color-secondary);
+.sheet-text {
+  font-size: var(--text-callout);
+  color: var(--secondary-label);
+  overflow-wrap: anywhere;
 }
 
-.modal-content.error .modal-heading::before {
-  content: "\2717";
-  color: var(--md-sys-color-error);
-}
-
-.modal-actions {
+.sheet-actions {
   display: flex;
-  gap: 10px;
   justify-content: flex-end;
-  margin-top: var(--space-4);
+  gap: var(--space-2);
+  margin-top: var(--space-3);
 }
 
-@keyframes modalIn {
-  from {
-    transform: translateY(8px) scale(0.97);
-    opacity: 0;
-  }
-  to {
-    transform: none;
-    opacity: 1;
-  }
+/* Status glyph in the "done" sheet */
+.sheet-icon {
+  width: 2.462rem;
+  height: 2.462rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  margin-bottom: var(--space-1);
+}
+
+.sheet.success .sheet-icon {
+  background: color-mix(in srgb, var(--green) 16%, transparent);
+}
+
+.sheet.success .sheet-icon::after {
+  content: "";
+  width: 0.5rem;
+  height: 0.923rem;
+  border: solid var(--green);
+  border-width: 0 2.5px 2.5px 0;
+  transform: translateY(-2px) rotate(45deg);
+}
+
+.sheet.error .sheet-icon {
+  background: color-mix(in srgb, var(--red) 16%, transparent);
+}
+
+.sheet.error .sheet-icon::after {
+  content: "!";
+  font-weight: 700;
+  font-size: 1.385rem;
+  color: var(--red);
 }
 
 .update-changelog {
-  max-height: 200px;
-  overflow-y: auto;
-  font-size: 12px;
-  line-height: 1.4;
+  max-height: 12rem;
+  overflow: auto;
+  margin: var(--space-1) 0 0;
+  padding: var(--space-2) var(--space-3);
+  background: var(--field-bg);
+  border: 0.5px solid var(--control-border);
+  border-radius: var(--radius-control);
+  font-family: var(--font-ui);
+  font-size: var(--text-callout);
   white-space: pre-wrap;
-  margin: var(--space-3) 0;
+  color: var(--secondary-label);
+  -webkit-user-select: text;
+  user-select: text;
 }
 
-.toast.hidden { display: none; }
+.update-changelog:empty {
+  display: none;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes sheetIn {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+}
+
+/* ---------- Toast ---------- */
 
 .toast {
   position: fixed;
   left: 50%;
-  bottom: var(--space-5);
-  transform: translateX(-50%) translateY(18px);
-  opacity: 0;
-  pointer-events: none;
-  z-index: 10000;
-  width: min(480px, calc(100vw - var(--space-8)));
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--toast-border);
+  bottom: 4.615rem; /* above the status bar */
+  z-index: 60;
+  max-width: min(26rem, calc(100% - 2 * var(--space-4)));
+  padding: var(--space-2) var(--space-4);
+  border-radius: 8px;
   background: var(--toast-bg);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
   color: var(--toast-text);
-  box-shadow: var(--shadow-2);
-  font-size: 12px;
-  line-height: 1.35;
-  transition: transform 300ms ease-out, opacity 250ms ease-out;
+  font-size: var(--text-callout);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  opacity: 0;
+  transform: translate(-50%, 8px);
+  transition: opacity var(--duration) var(--ease), transform var(--duration) var(--ease);
+  pointer-events: none;
 }
 
 .toast.show {
   opacity: 1;
-  transform: translateX(-50%) translateY(0);
+  transform: translate(-50%, 0);
   pointer-events: auto;
 }
 
 .toast-title {
   font-weight: 600;
-  font-size: 13px;
-  margin-bottom: var(--space-2);
-  color: inherit;
+  margin-bottom: 2px;
 }
 
 .toast-list {
   margin: 0;
-  padding-left: var(--space-5);
-  list-style: disc;
+  padding-left: var(--space-4);
 }
 
-.toast-list li {
-  margin-bottom: 2px;
-}
-
-.toast-list li:last-child {
-  margin-bottom: 0;
-}
-
-.label.inline {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.info-tip {
-  position: relative;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-weight: 400;
-  line-height: 1;
-  text-transform: none;
-  color: var(--md-sys-color-on-surface);
-  background: var(--surface-container-high);
-  border: 1px solid var(--md-sys-color-outline-variant);
-  cursor: help;
-  user-select: none;
-}
-
-.info-tip::before {
-  content: "i";
-}
-
-.info-tip-content {
-  position: fixed;
-  top: 0;
-  left: 0;
-  transform: translateY(6px);
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  width: min(320px, 90vw);
-  max-height: min(280px, 50vh);
-  overflow: auto;
-  padding: var(--space-3) 14px;
-  border-radius: var(--radius-md);
-  background: var(--tooltip-bg);
-  color: var(--tooltip-text);
-  border: 1px solid var(--tooltip-border);
-  box-shadow: var(--shadow-2);
-  font-size: 12px;
-  text-transform: none;
-  line-height: 1.45;
-  transition: opacity 160ms ease, transform 160ms ease, visibility 0ms linear 160ms;
-  z-index: 2000;
-}
-
-.info-tip.open .info-tip-content {
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(0);
-  pointer-events: auto;
-  transition-delay: 0ms;
-}
-
-.info-tip-content strong {
-  color: var(--md-sys-color-on-surface);
+.toast .btn {
+  margin-top: var(--space-2);
 }

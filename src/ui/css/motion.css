@@ -1,0 +1,156 @@
+/* Motion layer. Every animation here is triggered by something the user
+   did and only animates opacity/transform. Rules that would otherwise fire
+   on first paint are scoped to .motion-ready, which app.js adds after load.
+   The global prefers-reduced-motion rule in base.css turns all of it off. */
+
+/* Preview card: content swaps (empty -> loading -> result) */
+.motion-ready .preview-group > :not(.hidden) {
+  animation: contentIn var(--duration-standard) var(--ease-decelerate);
+}
+
+@keyframes contentIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+/* Thumbnail fades in once it has actually loaded */
+.preview-thumb {
+  opacity: 0;
+  transition: opacity var(--duration-standard) var(--ease);
+}
+
+.preview-thumb.loaded {
+  opacity: 1;
+}
+
+/* Log disclosure */
+.log-details[open] > .log {
+  animation: expandIn var(--duration) var(--ease-decelerate);
+  transform-origin: top;
+}
+
+@keyframes expandIn {
+  from {
+    opacity: 0;
+    transform: scaleY(0.96);
+  }
+}
+
+/* Footnote under Format: cross-fade when the preset changes */
+.footnote.changed {
+  animation: fadeSwap var(--duration-standard) var(--ease);
+}
+
+@keyframes fadeSwap {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Progress row slides up into the status bar when a download starts */
+.progress-row.visible {
+  animation: contentIn var(--duration-standard) var(--ease-decelerate);
+}
+
+/* Status text change */
+.status-text.changed {
+  animation: fadeSwap var(--duration) var(--ease);
+}
+
+/* Sheets: exit mirrors entry, a little faster (exits are quicker) */
+.sheet-backdrop.closing {
+  animation: fadeOut var(--duration) var(--ease-accelerate) forwards;
+}
+
+.sheet-backdrop.closing .sheet {
+  animation: sheetOut var(--duration) var(--ease-accelerate) forwards;
+}
+
+@keyframes fadeOut {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes sheetOut {
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+/* Done sheet: result glyph pops in after the sheet lands */
+.sheet .sheet-icon {
+  animation: popIn var(--duration-emphasized) var(--ease-decelerate) 80ms both;
+}
+
+.sheet.success .sheet-icon::after {
+  animation: checkIn var(--duration-standard) var(--ease-decelerate) 180ms both;
+}
+
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+
+@keyframes checkIn {
+  from {
+    opacity: 0;
+    transform: translateY(-2px) rotate(45deg) scale(0.4);
+  }
+}
+
+/* Theme switch: briefly cross-fade colors (only while switching, so normal
+   hovers stay instant) */
+.theme-switching,
+.theme-switching * {
+  transition:
+    background-color var(--duration-emphasized) var(--ease),
+    border-color var(--duration-emphasized) var(--ease),
+    color var(--duration-emphasized) var(--ease) !important;
+}
+
+/* Theme toggle icon rotates in */
+#themeToggle .icon {
+  transition: transform var(--duration-emphasized) var(--ease);
+}
+
+#themeToggle:active .icon {
+  transform: rotate(-30deg);
+}
+
+.motion-ready[data-theme="dark"] #themeToggle .icon-sun {
+  animation: spinIn var(--duration-emphasized) var(--ease-decelerate);
+}
+
+.motion-ready[data-theme="light"] #themeToggle .icon-moon {
+  animation: spinIn var(--duration-emphasized) var(--ease-decelerate);
+}
+
+@keyframes spinIn {
+  from {
+    opacity: 0;
+    transform: rotate(-90deg) scale(0.6);
+  }
+}
+
+/* Toast enters from below, exits faster */
+.toast {
+  transition:
+    opacity var(--duration-standard) var(--ease-decelerate),
+    transform var(--duration-standard) var(--ease-decelerate);
+}
+
+.toast:not(.show) {
+  transition-timing-function: var(--ease-accelerate);
+  transition-duration: var(--duration);
+}
+
+/* Option rows that appear when Type changes (or a playlist link is pasted) */
+.motion-ready .form-row.revealed {
+  animation: contentIn var(--duration-standard) var(--ease-decelerate);
+}

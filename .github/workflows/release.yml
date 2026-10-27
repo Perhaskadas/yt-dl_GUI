@@ -35,35 +35,35 @@ jobs:
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
+          # One-dir, not one-file: one-file unpacks itself on every launch, which
+          # delays app start and every download (each runs yt-dlp as a child copy)
           pyinstaller `
             --noconsole `
-            --onefile `
+            --onedir `
             --name "yt-dlp-gui" `
             --icon "src/assets/yt-dlp-gui.ico" `
             --collect-all webview `
             --add-data "src/ui;ui" `
             --add-data "src/assets;assets" `
             src/app/main.py
-          Compress-Archive -Path dist/yt-dlp-gui.exe -DestinationPath dist/yt-dlp-gui-windows.zip -Force
+          # Zip the whole folder: yt-dlp-gui.exe needs the _internal folder beside it
+          Compress-Archive -Path dist/yt-dlp-gui -DestinationPath dist/yt-dlp-gui-windows.zip -Force
 
       - name: Build (macOS)
         if: matrix.os == 'macos-latest'
         shell: bash
         run: |
+          # One-dir .app (see the Windows step for why not one-file)
           pyinstaller \
             --windowed \
-            --onefile \
+            --onedir \
             --name "yt-dlp-gui" \
             --icon "src/assets/yt-dlp-gui.icns" \
             --collect-all webview \
             --add-data "src/ui:ui" \
             --add-data "src/assets:assets" \
             src/app/main.py
-          if [ -d "dist/yt-dlp-gui.app" ]; then
-            ditto -c -k --sequesterRsrc --keepParent "dist/yt-dlp-gui.app" "dist/yt-dlp-gui-macos.zip"
-          else
-            zip -j "dist/yt-dlp-gui-macos.zip" "dist/yt-dlp-gui"
-          fi
+          ditto -c -k --sequesterRsrc --keepParent "dist/yt-dlp-gui.app" "dist/yt-dlp-gui-macos.zip"
 
       - name: Upload release assets
         uses: softprops/action-gh-release@v3

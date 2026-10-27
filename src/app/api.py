@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import json
 import os
-import shutil
 import subprocess
 import sys
 import threading
@@ -12,7 +11,7 @@ from urllib.parse import urlparse
 import webview
 import app
 from app import deps, updater
-from app.runner import Runner
+from app.runner import DownloadOptions, Runner
 
 
 class Api:
@@ -62,12 +61,19 @@ class Api:
         with self._ui_lock:
             self._window.evaluate_js(f"ui.onPartStart({int(part)})")
 
-    def _ui_done(self, code: int):
+    def _ui_item(self, index: int, total: int):
+        self._progress_max = 0.0
+        if not self._window:
+            return
+        with self._ui_lock:
+            self._window.evaluate_js(f"ui.onItemStart({int(index)}, {int(total)})")
+
+    def _ui_done(self, code: int, cancelled: bool):
         if not self._window:
             return
         out_dir_json = json.dumps(self._last_out_dir)
         with self._ui_lock:
-            self._window.evaluate_js(f"ui.onJobEnd({code}, {out_dir_json})")
+            self._window.evaluate_js(f"ui.onJobEnd({int(code)}, {out_dir_json}, {json.dumps(cancelled)})")
 
     # ---------- JS-callable methods ----------
 
@@ -76,7 +82,7 @@ class Api:
         folders = self._window.create_file_dialog(webview.FileDialog.FOLDER)
         return folders[0] if folders else None
 
-    def start_download(self, url: str, out_dir: str, preset: str = "best", cookies_browser: str = ""):
+    def start_download(self, url: str, out_dir: str, options: dict | None = None):
         url = (url or "").strip()
         out_dir = (out_dir or "").strip()
 
@@ -92,8 +98,14 @@ class Api:
         if self.active_job_id is not None:
             return {"ok": False, "error": "A job is already running"}
 
-        if cookies_browser:
-            self._cookies_browser = cookies_browser.lower()
+        try:
+            opts = DownloadOptions.from_dict(options)
+        except ValueError as e:
+            return {"ok": False, "error": str(e)}
+
+        if opts.cookies_browser:
+            self._cookies_browser = opts.cookies_browser
+        opts.cookies_browser = self._resolve_cookies(opts.cookies_browser)
 
         self._last_out_dir = out_dir
         self._progress_max = 0.0
@@ -101,11 +113,11 @@ class Api:
         job_id = self.runner.start_ytdlp(
             url=url,
             out_dir=out_dir,
-            preset=preset,
-            cookies_browser=self._resolve_cookies(cookies_browser),
+            opts=opts,
             on_log=self._ui_log,
             on_progress=self._ui_progress,
             on_part=self._ui_part,
+            on_item=self._ui_item,
             on_done=self._on_done,
         )
         self.active_job_id = job_id
@@ -118,7 +130,9 @@ class Api:
         ok = self.runner.stop(self.active_job_id)
         return {"ok": ok}
 
-    def probe(self, url: str, cookies_browser: str = ""):
+    def probe(self, url: str, cookies_browser: str = "", playlist: bool = False):
+        """Preview a link. With playlist=True a video-in-playlist link
+        ("watch?v=X&list=Y") previews the whole playlist instead."""
         url = (url or "").strip()
         if not url:
             return {"ok": False, "error": "Missing URL"}
@@ -126,9 +140,17 @@ class Api:
         if not _is_http_url(url):
             return {"ok": False, "error": "URL must start with http:// or https://"}
 
+        playlist = bool(playlist)
         if _use_inprocess_ytdlp():
-            return self._probe_inprocess(url, cookies_browser)
-        return self._probe_subprocess(url, cookies_browser)
+            return self._probe_inprocess(url, cookies_browser, playlist)
+        return self._probe_subprocess(url, cookies_browser, playlist)
+
+    def list_browsers(self):
+        """Browsers yt-dlp can read cookies from that appear to be installed."""
+        try:
+            return {"ok": True, "browsers": _installed_browsers()}
+        except Exception as e:
+            return {"ok": False, "error": repr(e), "browsers": []}
 
     def set_cookies_browser(self, browser: str):
         self._cookies_browser = (browser or "").strip().lower()
@@ -153,11 +175,7 @@ class Api:
             return {"ok": False, "error": repr(e)}
 
     def system_status(self):
-        return {
-            "ok": True,
-            "ffmpeg": shutil.which("ffmpeg") is not None,
-            "deno": shutil.which("deno") is not None,
-        }
+        return {"ok": True, **deps.check_deps()}
 
     def install_deps(self):
         def _on_status(text):
@@ -229,16 +247,16 @@ class Api:
 
     # ---------- Private helpers ----------
 
-    def _on_done(self, code: int):
+    def _on_done(self, code: int, cancelled: bool):
         self._progress_max = 0.0
-        self._ui_log(f"[api] job finished with code {code}")
+        self._ui_log(f"[api] job {'cancelled' if cancelled else f'finished with code {code}'}")
         self.active_job_id = None
-        self._ui_done(code)
+        self._ui_done(code, cancelled)
 
     def _resolve_cookies(self, cookies_browser: str = "") -> str:
         return (cookies_browser or self._cookies_browser or "").strip().lower()
 
-    def _probe_subprocess(self, url: str, cookies_browser: str = ""):
+    def _probe_subprocess(self, url: str, cookies_browser: str = "", playlist: bool = False):
         creationflags = 0
         if sys.platform.startswith("win"):
             creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
@@ -249,7 +267,10 @@ class Api:
         if b:
             args += ["--cookies-from-browser", b]
 
-        args += ["--dump-single-json", "--no-playlist", "--skip-download", "--", url]
+        # --flat-playlist: a pasted playlist returns its title and entry list
+        # instead of resolving every video in it
+        playlist_flag = "--yes-playlist" if playlist else "--no-playlist"
+        args += ["--dump-single-json", playlist_flag, "--flat-playlist", "--skip-download", "--", url]
 
         try:
             t0 = time.time()
@@ -260,7 +281,8 @@ class Api:
                 text=True,
                 encoding="utf-8",
                 errors="replace",
-                timeout=20,
+                # Long playlists are fetched page by page, so allow them more time
+                timeout=60 if playlist else 20,
                 creationflags=creationflags,
             )
 
@@ -285,14 +307,15 @@ class Api:
         except Exception as e:
             return {"ok": False, "error": repr(e)}
 
-    def _probe_inprocess(self, url: str, cookies_browser: str = ""):
+    def _probe_inprocess(self, url: str, cookies_browser: str = "", playlist: bool = False):
         try:
             import yt_dlp
 
             ydl_opts: dict = {
                 "quiet": True,
                 "skip_download": True,
-                "noplaylist": True,
+                "noplaylist": not playlist,
+                "extract_flat": "in_playlist",
                 "socket_timeout": 20,
             }
 
@@ -306,9 +329,6 @@ class Api:
             if not data:
                 return {"ok": False, "error": "Preview failed"}
 
-            if data.get("entries"):
-                data = dict(next(iter(data["entries"]), data))
-
             return {"ok": True, "preview": _build_preview(data, url)}
 
         except Exception as e:
@@ -318,6 +338,9 @@ class Api:
 # ---------- Module-level helpers ----------
 
 def _build_preview(data: dict, fallback_url: str, took_ms: int = 0) -> dict:
+    if data.get("_type") == "playlist":
+        return _build_playlist_preview(data, fallback_url, took_ms)
+
     duration = data.get("duration")
     if not isinstance(duration, int):
         duration = None
@@ -330,6 +353,37 @@ def _build_preview(data: dict, fallback_url: str, took_ms: int = 0) -> dict:
         "webpage_url": data.get("webpage_url") or fallback_url,
         "is_live": bool(data.get("is_live")),
         "extractor": data.get("extractor") or "",
+        "took_ms": took_ms,
+    }
+
+
+# Enough for any normal playlist without making the UI list unwieldy
+MAX_PLAYLIST_ROWS = 2000
+
+
+def _build_playlist_preview(data: dict, fallback_url: str, took_ms: int = 0) -> dict:
+    entries = [e for e in (data.get("entries") or []) if e]
+    durations = [e.get("duration") for e in entries]
+    known = [int(d) for d in durations if isinstance(d, (int, float))]
+    thumbnails = data.get("thumbnails") or (entries[0].get("thumbnails") if entries else None) or []
+    return {
+        "title": data.get("title") or "",
+        "uploader": data.get("uploader") or data.get("channel") or "",
+        "duration": None,
+        "duration_text": "",
+        "thumbnail": thumbnails[-1].get("url", "") if thumbnails else "",
+        "webpage_url": data.get("webpage_url") or fallback_url,
+        "is_live": False,
+        "extractor": data.get("extractor") or "",
+        "playlist_count": data.get("playlist_count") or len(entries),
+        "total_duration_text": _fmt_duration(sum(known)) if known else "",
+        "entries": [
+            {
+                "title": e.get("title") or e.get("id") or "Untitled",
+                "duration_text": _fmt_duration(int(e["duration"])) if isinstance(e.get("duration"), (int, float)) else "",
+            }
+            for e in entries[:MAX_PLAYLIST_ROWS]
+        ],
         "took_ms": took_ms,
     }
 
@@ -354,6 +408,24 @@ def _extract_first_json(text: str) -> dict | None:
         return obj if isinstance(obj, dict) else None
     except Exception:
         return None
+
+
+def _installed_browsers() -> list[str]:
+    # Uses yt-dlp's own profile-path tables so detection matches what
+    # --cookies-from-browser will actually look for
+    from yt_dlp import cookies as ytc
+
+    found = []
+    for browser in sorted(ytc.SUPPORTED_BROWSERS):
+        if browser == "safari":
+            present = sys.platform == "darwin"
+        elif browser == "firefox":
+            present = any(os.path.isdir(d) for d in ytc._firefox_browser_dirs())
+        else:
+            present = os.path.isdir(ytc._get_chromium_based_browser_settings(browser)["browser_dir"])
+        if present:
+            found.append(browser)
+    return found
 
 
 def _is_http_url(url: str) -> bool:

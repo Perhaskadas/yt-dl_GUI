@@ -9,7 +9,7 @@ description = "A GUI wrapper for yt-dlp using pywebview"
 requires-python = ">=3.10"
 dependencies = [
   "pywebview>=6.2.1",
-  "yt-dlp>=2026.10.26",
+  "yt-dlp[default]>=2026.10.26",
   "yt-dlp-ejs>=0.8.0"
 ]
 
