@@ -11,10 +11,31 @@ from dataclasses import dataclass
 from typing import Callable, Optional, Dict
 
 DOWNLOAD_PCT_RE = re.compile(r"\[download\]\s+(\d+(?:\.\d+)?)%")
+DOWNLOAD_DEST_RE = re.compile(r"\[download\] Destination: ")
 
 LogFn = Callable[[str], None]
 ProgressFn = Callable[[float], None]  # 0.0 to 100.0
 DoneFn = Callable[[int], None]        # exit code (0 = success)
+PartFn = Callable[[int], None]        # 1-based index of the file now downloading
+
+# preset -> format selector plus optional merge container / audio conversion
+PRESETS: Dict[str, Dict[str, str]] = {
+    "best": {"format": "bv*+ba/best"},
+    "mp4": {"format": "bv*+ba/best", "merge_output_format": "mp4"},
+    "1080p": {"format": "bv*[height<=1080]+ba/best[height<=1080]"},
+    "video": {"format": "bv*"},
+    "audio": {"format": "ba"},
+    "mp3": {"format": "ba", "audio_format": "mp3"},
+}
+PRESET_ALIASES = {"videoonly": "video", "video_only": "video"}
+
+
+def _resolve_preset(preset: str, on_log: LogFn) -> Dict[str, str]:
+    name = PRESET_ALIASES.get(preset, preset)
+    if name not in PRESETS:
+        on_log(f"[runner] unknown preset '{preset}', falling back to best")
+        name = "best"
+    return PRESETS[name]
 
 
 @dataclass
@@ -37,6 +58,7 @@ class Runner:
         cookies_browser: str,
         on_log: LogFn,
         on_progress: ProgressFn,
+        on_part: PartFn,
         on_done: DoneFn,
     ) -> str:
         job_id = uuid.uuid4().hex
@@ -48,7 +70,7 @@ class Runner:
 
         t = threading.Thread(
             target=self._run_ytdlp,
-            args=(handle, url, out_dir, preset, cookies_browser, on_log, on_progress, on_done),
+            args=(handle, url, out_dir, preset, cookies_browser, on_log, on_progress, on_part, on_done),
             daemon=True,
         )
         t.start()
@@ -87,13 +109,14 @@ class Runner:
         cookies_browser: str,
         on_log: LogFn,
         on_progress: ProgressFn,
+        on_part: PartFn,
         on_done: DoneFn,
     ) -> None:
         return_code = 1
         try:
             if _use_inprocess_ytdlp():
                 return_code = self._run_ytdlp_inprocess(
-                    handle, url, out_dir, preset, cookies_browser, on_log, on_progress
+                    handle, url, out_dir, preset, cookies_browser, on_log, on_progress, on_part
                 )
             else:
                 creationflags = 0
@@ -118,28 +141,19 @@ class Runner:
                     args += ["--cookies-from-browser", cookies_browser]
 
                 # Presets -> yt-dlp flags
-                if preset == "best":
-                    args += ["-f", "bv*+ba/best"]
-                elif preset == "mp4":
-                    args += ["-f", "bv*+ba/best", "--merge-output-format", "mp4"]
-                elif preset == "1080p":
-                    args += ["-f", "bv*[height<=1080]+ba/best[height<=1080]"]
-                elif preset in ("videoonly", "video_only", "video"):
-                    args += ["-f", "bv*"]
-                elif preset == "audio":
-                    args += ["-f", "ba"]
-                elif preset == "mp3":
-                    args += ["-f", "ba", "-x", "--audio-format", "mp3"]
-                else:
-                    on_log(f"[runner] unknown preset '{preset}', falling back to best")
-                    args += ["-f", "bv*+ba/best"]
+                opts = _resolve_preset(preset, on_log)
+                args += ["-f", opts["format"]]
+                if "merge_output_format" in opts:
+                    args += ["--merge-output-format", opts["merge_output_format"]]
+                if "audio_format" in opts:
+                    args += ["-x", "--audio-format", opts["audio_format"]]
 
                 # Output folder (optional)
                 if out_dir:
                     args += ["-P", out_dir]
 
-                # URL + progress-friendly output
-                args += ["--newline", url]
+                # Progress-friendly output; "--" so the URL can never be read as an option
+                args += ["--newline", "--", url]
 
                 on_log("[runner] cmd: " + " ".join(args))
 
@@ -157,9 +171,15 @@ class Runner:
 
                 assert proc.stdout is not None
 
+                part = 0
                 for line in proc.stdout:
                     text = line.rstrip("\n")
                     on_log(text)
+
+                    # video+audio presets download one file per stream
+                    if DOWNLOAD_DEST_RE.match(text):
+                        part += 1
+                        on_part(part)
 
                     m = DOWNLOAD_PCT_RE.search(text)
                     if m:
@@ -200,6 +220,7 @@ class Runner:
         cookies_browser: str,
         on_log: LogFn,
         on_progress: ProgressFn,
+        on_part: PartFn,
     ) -> int:
         try:
             import yt_dlp
@@ -214,32 +235,25 @@ class Runner:
             preset = (preset or "best").strip().lower()
             cookies_browser = (cookies_browser or "").strip().lower()
 
-            fmt = "bv*+ba/best"
-            if preset == "mp4":
-                fmt = "bv*+ba/best"
-            elif preset == "1080p":
-                fmt = "bv*[height<=1080]+ba/best[height<=1080]"
-            elif preset in ("videoonly", "video_only", "video"):
-                fmt = "bv*"
-            elif preset == "audio":
-                fmt = "ba"
-            elif preset == "mp3":
-                fmt = "ba"
-            elif preset != "best":
-                on_log(f"[runner] unknown preset '{preset}', falling back to best")
+            opts = _resolve_preset(preset, on_log)
+            files_seen: list[str] = []
 
             def progress_hook(d):
                 if handle.stop_event.is_set():
                     raise yt_dlp.utils.DownloadError("Download cancelled")
                 if d.get("status") != "downloading":
                     return
+                filename = d.get("filename")
+                if filename and filename not in files_seen:
+                    files_seen.append(filename)
+                    on_part(len(files_seen))
                 total = d.get("total_bytes") or d.get("total_bytes_estimate")
                 downloaded = d.get("downloaded_bytes")
                 if total and downloaded is not None:
                     on_progress((downloaded / total) * 100.0)
 
             ydl_opts: dict = {
-                "format": fmt,
+                "format": opts["format"],
                 "progress_hooks": [progress_hook],
                 "logger": _YtDlpLogger(on_log),
             }
@@ -250,14 +264,14 @@ class Runner:
             if cookies_browser:
                 ydl_opts["cookiesfrombrowser"] = (cookies_browser,)
 
-            if preset == "mp4":
-                ydl_opts["merge_output_format"] = "mp4"
+            if "merge_output_format" in opts:
+                ydl_opts["merge_output_format"] = opts["merge_output_format"]
 
-            if preset == "mp3":
+            if "audio_format" in opts:
                 ydl_opts["postprocessors"] = [
                     {
                         "key": "FFmpegExtractAudio",
-                        "preferredcodec": "mp3",
+                        "preferredcodec": opts["audio_format"],
                     }
                 ]
 

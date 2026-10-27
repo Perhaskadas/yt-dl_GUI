@@ -2,6 +2,7 @@
 """Auto-download portable ffmpeg and deno binaries on first launch."""
 from __future__ import annotations
 
+import hashlib
 import os
 import platform
 import shutil
@@ -13,24 +14,56 @@ from io import BytesIO
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
-# Binary source URLs
+# Binary sources (pinned versions, verified by SHA-256)
 # ---------------------------------------------------------------------------
 
-_DENO_URLS: dict[str, str] = {
-    "darwin_arm64": "https://github.com/denoland/deno/releases/latest/download/deno-aarch64-apple-darwin.zip",
-    "darwin_x86_64": "https://github.com/denoland/deno/releases/latest/download/deno-x86_64-apple-darwin.zip",
-    "win32_x86_64": "https://github.com/denoland/deno/releases/latest/download/deno-x86_64-pc-windows-msvc.zip",
+_DENO_RELEASE = "https://github.com/denoland/deno/releases/download/v2.9.8"
+_FFMPEG_MACOS = "https://ffmpeg.martin-riedl.de/download/macos"
+_FFMPEG_WIN = "https://github.com/GyanD/codexffmpeg/releases/download/9.0.2"
+
+# platform key -> (url, sha256 of the zip)
+_DENO_SOURCES: dict[str, tuple[str, str]] = {
+    "darwin_arm64": (
+        f"{_DENO_RELEASE}/deno-aarch64-apple-darwin.zip",
+        "9f0bf660393da2eaff044cdc7444cb08c73f235849b61d224d825a194ce7c98e",
+    ),
+    "darwin_x86_64": (
+        f"{_DENO_RELEASE}/deno-x86_64-apple-darwin.zip",
+        "4b2f5edd2639b7470f034238b321d7002d8dfb4726d8558f52c17afac370eb2c",
+    ),
+    "win32_x86_64": (
+        f"{_DENO_RELEASE}/deno-x86_64-pc-windows-msvc.zip",
+        "cba84b26e0df5ae7f74fc66b86a95b866872a86292ebd84fa1e959927edd93bf",
+    ),
 }
 
-_FFMPEG_URLS: dict[str, str] = {
-    "darwin_arm64": "https://ffmpeg.martin-riedl.de/redirect/latest/macos/arm64/snapshot/ffmpeg.zip",
-    "darwin_x86_64": "https://ffmpeg.martin-riedl.de/redirect/latest/macos/amd64/snapshot/ffmpeg.zip",
-    "win32_x86_64": "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip",
+_FFMPEG_SOURCES: dict[str, tuple[str, str]] = {
+    "darwin_arm64": (
+        f"{_FFMPEG_MACOS}/arm64/1789931890_9.0.2/ffmpeg.zip",
+        "c8ed4c4e6978a03c485edbfe4e0a5dc2380f8a30bba5150531b31b094492d924",
+    ),
+    "darwin_x86_64": (
+        f"{_FFMPEG_MACOS}/amd64/1789931006_9.0.2/ffmpeg.zip",
+        "7c6b4125b191cbf773832dc51f424cf2b6bb7da43007d1e066f95909e47cacd4",
+    ),
+    "win32_x86_64": (
+        f"{_FFMPEG_WIN}/ffmpeg-9.0.2-essentials_build.zip",
+        "60f467265b1e312373dbcd92200c2618a74850f98d3d078e94296bb3fa2047ba",
+    ),
 }
+
+# Windows on ARM runs the x64 builds under emulation
+for _sources in (_DENO_SOURCES, _FFMPEG_SOURCES):
+    _sources["win32_arm64"] = _sources["win32_x86_64"]
 
 
 def _platform_key() -> str:
-    plat = "win32" if sys.platform.startswith("win") else "darwin"
+    if sys.platform.startswith("win"):
+        plat = "win32"
+    elif sys.platform == "darwin":
+        plat = "darwin"
+    else:
+        plat = sys.platform
     machine = platform.machine().lower()
     if machine in ("arm64", "aarch64"):
         arch = "arm64"
@@ -46,8 +79,10 @@ def _platform_key() -> str:
 def get_bin_dir() -> Path:
     if sys.platform.startswith("win"):
         base = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
-    else:
+    elif sys.platform == "darwin":
         base = Path.home() / "Library" / "Application Support"
+    else:
+        base = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share"))
     return base / "yt-dlp-gui" / "bin"
 
 
@@ -89,45 +124,42 @@ def _make_executable(path: Path):
         path.chmod(path.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
 
-def _install_deno(bin_dir: Path, on_progress):
+def _install_binary(name: str, sources: dict[str, tuple[str, str]], bin_dir: Path, on_progress):
     key = _platform_key()
-    url = _DENO_URLS.get(key)
-    if not url:
-        raise RuntimeError(f"No deno binary available for {key}")
+    source = sources.get(key)
+    if not source:
+        raise RuntimeError(f"No {name} binary available for {key}; install it manually")
+    url, expected_sha256 = source
 
     data = _download_with_progress(url, on_progress)
-    with zipfile.ZipFile(BytesIO(data)) as zf:
-        exe_name = "deno.exe" if sys.platform.startswith("win") else "deno"
-        zf.extract(exe_name, bin_dir)
-    _make_executable(bin_dir / exe_name)
+    actual_sha256 = hashlib.sha256(data).hexdigest()
+    if actual_sha256 != expected_sha256:
+        raise RuntimeError(f"{name} checksum mismatch (got {actual_sha256})")
 
-
-def _install_ffmpeg(bin_dir: Path, on_progress):
-    key = _platform_key()
-    url = _FFMPEG_URLS.get(key)
-    if not url:
-        raise RuntimeError(f"No ffmpeg binary available for {key}")
-
-    data = _download_with_progress(url, on_progress)
-    exe_name = "ffmpeg.exe" if sys.platform.startswith("win") else "ffmpeg"
+    exe_name = f"{name}.exe" if sys.platform.startswith("win") else name
 
     with zipfile.ZipFile(BytesIO(data)) as zf:
-        # Find the ffmpeg binary inside the zip (may be nested in a bin/ folder)
-        target = None
-        for name in zf.namelist():
-            basename = name.rsplit("/", 1)[-1] if "/" in name else name
-            if basename == exe_name:
-                target = name
-                break
+        # Find the binary inside the zip (may be nested in a bin/ folder)
+        target = next((n for n in zf.namelist() if n.rsplit("/", 1)[-1] == exe_name), None)
         if target is None:
             raise RuntimeError(f"{exe_name} not found inside zip")
 
-        # Extract to bin_dir with flat name
+        # Extract to bin_dir with flat name; write to a temp file first so a
+        # failed extraction never leaves a truncated binary on PATH
         dest = bin_dir / exe_name
-        with zf.open(target) as src, open(dest, "wb") as dst:
+        tmp = dest.with_name(dest.name + ".part")
+        with zf.open(target) as src, open(tmp, "wb") as dst:
             shutil.copyfileobj(src, dst)
+        _make_executable(tmp)
+        os.replace(tmp, dest)
 
-    _make_executable(bin_dir / exe_name)
+
+def _install_deno(bin_dir: Path, on_progress):
+    _install_binary("deno", _DENO_SOURCES, bin_dir, on_progress)
+
+
+def _install_ffmpeg(bin_dir: Path, on_progress):
+    _install_binary("ffmpeg", _FFMPEG_SOURCES, bin_dir, on_progress)
 
 
 # ---------------------------------------------------------------------------

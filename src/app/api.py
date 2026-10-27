@@ -8,6 +8,7 @@ import subprocess
 import sys
 import threading
 import time
+from urllib.parse import urlparse
 import webview
 import app
 from app import deps, updater
@@ -53,6 +54,14 @@ class Api:
         with self._ui_lock:
             self._window.evaluate_js(f"ui.onProgress({pct})")
 
+    def _ui_part(self, part: int):
+        # Each file of a multi-file download reports its own 0-100%
+        self._progress_max = 0.0
+        if not self._window:
+            return
+        with self._ui_lock:
+            self._window.evaluate_js(f"ui.onPartStart({int(part)})")
+
     def _ui_done(self, code: int):
         if not self._window:
             return
@@ -74,6 +83,9 @@ class Api:
         if not url:
             return {"ok": False, "error": "Missing URL"}
 
+        if not _is_http_url(url):
+            return {"ok": False, "error": "URL must start with http:// or https://"}
+
         if not out_dir:
             return {"ok": False, "error": "Select an output folder."}
 
@@ -93,6 +105,7 @@ class Api:
             cookies_browser=self._resolve_cookies(cookies_browser),
             on_log=self._ui_log,
             on_progress=self._ui_progress,
+            on_part=self._ui_part,
             on_done=self._on_done,
         )
         self.active_job_id = job_id
@@ -109,6 +122,9 @@ class Api:
         url = (url or "").strip()
         if not url:
             return {"ok": False, "error": "Missing URL"}
+
+        if not _is_http_url(url):
+            return {"ok": False, "error": "URL must start with http:// or https://"}
 
         if _use_inprocess_ytdlp():
             return self._probe_inprocess(url, cookies_browser)
@@ -233,7 +249,7 @@ class Api:
         if b:
             args += ["--cookies-from-browser", b]
 
-        args += ["--dump-single-json", "--no-playlist", "--skip-download", url]
+        args += ["--dump-single-json", "--no-playlist", "--skip-download", "--", url]
 
         try:
             t0 = time.time()
@@ -338,6 +354,12 @@ def _extract_first_json(text: str) -> dict | None:
         return obj if isinstance(obj, dict) else None
     except Exception:
         return None
+
+
+def _is_http_url(url: str) -> bool:
+    # Mirrors the UI check; also guarantees the URL can't be parsed as a yt-dlp option
+    parsed = urlparse(url)
+    return parsed.scheme in ("http", "https") and bool(parsed.netloc)
 
 
 def _use_inprocess_ytdlp() -> bool:

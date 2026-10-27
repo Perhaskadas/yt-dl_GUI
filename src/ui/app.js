@@ -41,6 +41,17 @@ const logPanel = document.getElementById("logPanel");
 const tabBtns = document.querySelectorAll(".tab-bar .tab-btn");
 
 let lastOutDir = "";
+let currentPart = 1;
+
+// Everything from yt-dlp / remote sites must go through this before innerHTML
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 
 const tipTriggers = document.querySelectorAll(".info-tip");
 let openTip = null;
@@ -260,7 +271,7 @@ window.ui = {
     if (info.pip) {
       const updates = Object.entries(info.pip)
         .filter(([, v]) => v)
-        .map(([k, v]) => `${k.replace("_", "-")} → ${v}`);
+        .map(([k, v]) => escapeHtml(`${k.replace("_", "-")} → ${v}`));
       if (updates.length) {
         showToastHtml(
           `<div class="toast-title">yt-dlp update available</div>` +
@@ -275,6 +286,13 @@ window.ui = {
     showToast(ok ? "pip update complete — restart to use new version" : "pip update failed — check logs", 4000);
   },
   onLog: (line) => log(line),
+  onPartStart: (part) => {
+    currentPart = part;
+    if (part > 1) {
+      progressIndicator.style.width = "0%";
+      progressPctEl.textContent = "0%";
+    }
+  },
   onProgress: (pct) => {
     const clamped = Math.max(0, Math.min(100, pct));
     // Transition from indeterminate → determinate on first tick
@@ -284,7 +302,8 @@ window.ui = {
     }
     progressIndicator.style.width = clamped + "%";
     progressPctEl.textContent = clamped.toFixed(1) + "%";
-    statusEl.textContent = `Downloading\u2026 ${clamped.toFixed(1)}%`;
+    const partLabel = currentPart > 1 ? ` (part ${currentPart})` : "";
+    statusEl.textContent = `Downloading${partLabel}\u2026 ${clamped.toFixed(1)}%`;
   },
   onJobEnd: (code, outDir) => {
     setRunning(false);
@@ -335,6 +354,7 @@ downloadBtn.addEventListener("click", async () => {
   // Run
   try {
     setRunning(true);
+    currentPart = 1;
     progressIndicator.style.width = "0%";
     progressPctEl.textContent = "0%";
     statusEl.textContent = "Starting download\u2026";
@@ -443,7 +463,7 @@ function showToastHtml(html, ms = 2200) {
 }
 
 function showToast(message, ms = 2200) {
-  showToastHtml(`<div>${message}</div>`, ms);
+  showToastHtml(`<div>${escapeHtml(message)}</div>`, ms);
 }
 
 function showToastList(items, ms = 2200) {
@@ -452,7 +472,7 @@ function showToastList(items, ms = 2200) {
   const html = `
     <div class="toast-title">Please fix the following:</div>
     <ul class="toast-list">
-      ${items.map((x) => `<li>${x}</li>`).join("")}
+      ${items.map((x) => `<li>${escapeHtml(x)}</li>`).join("")}
     </ul>
   `;
   showToastHtml(html, ms);
@@ -494,7 +514,7 @@ function previewSetError(msg) {
   pvTitle.textContent = "Preview failed";
   pvBadges.innerHTML = "";
   if (msg) {
-    pvBadges.innerHTML = `<span class="preview-badge">${msg}</span>`;
+    pvBadges.innerHTML = `<span class="preview-badge">${escapeHtml(msg)}</span>`;
   }
   pvThumb.classList.add("hidden");
   pvThumb.removeAttribute("src");
@@ -510,7 +530,7 @@ function previewSetData(pv) {
   const badges = [];
   if (pv.uploader) badges.push(pv.uploader);
   if (pv.duration_text) badges.push(pv.duration_text);
-  pvBadges.innerHTML = badges.map((b) => `<span class="preview-badge">${b}</span>`).join("");
+  pvBadges.innerHTML = badges.map((b) => `<span class="preview-badge">${escapeHtml(b)}</span>`).join("");
 
   if (pv.thumbnail) {
     pvThumb.src = pv.thumbnail;

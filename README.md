@@ -45,7 +45,7 @@ python -m app.main
 - **FFmpeg** — Required for merging video/audio streams and MP3 conversion
 - **Deno** — Required by yt-dlp-ejs for extracting certain sites
 
-Both are auto-installed to a local app directory on first launch if not found on your PATH. You can also install them manually:
+Both are auto-installed to a local app directory on first launch if not found on your PATH (macOS and Windows only; pinned versions, verified by SHA-256). On other platforms, install them with your package manager. You can also install them manually:
 
 | | macOS (Homebrew) | Windows (winget) |
 |---|---|---|
