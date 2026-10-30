@@ -32,6 +32,7 @@ Download videos and audio from YouTube and hundreds of other sites through a cle
 Download the latest release from the [Releases page](https://github.com/Perhaskadas/yt-dl_GUI/releases):
 
 - **macOS** — Unzip `yt-dlp-gui-macos.zip` and drag `yt-dlp-gui.app` into Applications.
+  The app isn't signed with an Apple Developer ID, so the first time you open it macOS will say it can't verify the developer. Click **Done**, then open **System Settings → Privacy & Security**, scroll down to the Security section and click **Open Anyway** next to the message about yt-dlp-gui. Confirm with your password, and from then on it opens normally.
 - **Windows** — Unzip `yt-dlp-gui-windows.zip` and run `yt-dlp-gui.exe` inside the `yt-dlp-gui` folder. Keep the `_internal` folder next to it; the app needs it.
 
 FFmpeg, FFprobe and Deno are installed automatically on first launch if they aren't already on your system.

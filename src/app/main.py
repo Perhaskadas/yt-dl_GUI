@@ -72,7 +72,12 @@ def main():
         print(f"pywebview renderer: {webview.renderer}.")
         api.attach_window(window)
 
-    start_kwargs = {}
+    # pywebview defaults to private mode, which wipes localStorage on every
+    # launch; the UI keeps its settings (theme, options, folder) there.
+    start_kwargs = {
+        "private_mode": False,
+        "storage_path": str(bin_dir.parent / "webview"),
+    }
     if icon_path and "icon" in inspect.signature(webview.start).parameters:
         start_kwargs["icon"] = icon_path
     webview.start(on_ready, **start_kwargs)
